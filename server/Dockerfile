@@ -1,20 +1,15 @@
-# Stage 1: Build FFmpeg and its dependencies
-FROM debian:bookworm-slim as ffmpeg_builder
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg && \
-    mkdir -p /ffmpeg-dist/usr/bin /ffmpeg-dist/usr/lib && \
-    cp /usr/bin/ffmpeg /ffmpeg-dist/usr/bin/ && \
-    cp -r /usr/lib/x86_64-linux-gnu/ /ffmpeg-dist/usr/lib/ && \
-    rm -rf /var/lib/apt/lists/*
+# Stage 1: FFmpeg builder
+FROM alpine:3.19 as ffmpeg_builder
+RUN wget https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -O /tmp/ffmpeg.tar.xz && \
+    tar xf /tmp/ffmpeg.tar.xz -C /tmp && \
+    mv /tmp/ffmpeg-*/ffmpeg /ffmpeg-dist/ && \
+    rm -rf /tmp/*
 
-# Stage 2: Main application image
+# Stage 2: Main image
 FROM node:20-slim
 
-# Copy FFmpeg from builder
-COPY --from=ffmpeg_builder /ffmpeg-dist /
-
-# Set library path
-ENV LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu
+# Copy FFmpeg binary
+COPY --from=ffmpeg_builder /ffmpeg-dist/ffmpeg /usr/local/bin/
 
 WORKDIR /app
 
@@ -32,13 +27,11 @@ RUN mkdir -p /app/uploads /app/output && \
 # Copy application files
 COPY . .
 
-# Non-root user setup
-RUN set -x ; \
-    addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 --ingroup nodejs nodejs && \
-    chown -R nodejs:nodejs /app
-
-USER nodejs
+# Instant user setup
+RUN echo "nodejs:x:999:999::/app:/bin/false" >> /etc/passwd && \
+    echo "nodejs:x:999:" >> /etc/group && \
+    chown -R 999:999 /app
+USER 999
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s \
