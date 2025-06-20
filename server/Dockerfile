@@ -28,7 +28,7 @@ COPY server/ .
 FROM node:20.12.2-alpine3.18
 WORKDIR /app
 
-# Install runtime dependencies
+# Install runtime dependencies and debugging tools
 RUN apk update && apk upgrade && \
     apk add --no-cache \
     ffmpeg \
@@ -37,6 +37,8 @@ RUN apk update && apk upgrade && \
     ca-certificates \
     openssl \
     tzdata \
+    curl \
+    netcat-openbsd \
     && rm -rf /var/cache/apk/*
 
 # Copy built files
@@ -50,9 +52,9 @@ RUN mkdir -p /app/uploads /app/output && \
 # Switch to non-root user
 USER node
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:6900/api/health || exit 1
+# Health check with better debugging
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD wget -q --spider http://localhost:6900/api/health || (echo "Health check failed" && exit 1)
 
 EXPOSE 6900
 CMD ["node", "server.js"]
