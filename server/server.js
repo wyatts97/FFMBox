@@ -162,14 +162,16 @@ const upload = multer({
   }
 }).array('files');
 
-// WebSocket server
-const server = require('http').createServer(app);
-const wss = new WebSocket.Server({ 
+// Create HTTP server
+const http = require('http');
+const server = http.createServer(app);
+
+// Initialize WebSocket server with compression
+const wss = new WebSocket.Server({
   server,
   clientTracking: true,
   perMessageDeflate: {
     zlibDeflateOptions: {
-      // See zlib defaults
       chunkSize: 1024,
       memLevel: 7,
       level: 3
@@ -203,19 +205,7 @@ const heartbeat = (ws) => {
   ws.isAlive = true;
 };
 
-// Start heartbeat interval
-const interval = setInterval(() => {
-  wss.clients.forEach((ws) => {
-    if (ws.isAlive === false) {
-      console.log('Terminating inactive WebSocket connection');
-      return ws.terminate();
-    }
-    
-    ws.isAlive = false;
-    ws.ping(() => {});
-  });
-}, 30000); // 30 seconds
-
+// WebSocket connection handling
 wss.on('connection', (ws, req) => {
   const clientId = uuidv4();
   const ip = req.socket.remoteAddress;
@@ -732,7 +722,7 @@ app.post('/api/cleanup', async (req, res) => {
 });
 
 // Start server
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log('╔══════════════════════════════════════════════════╗');
   console.log('║               FFMBox Server Started               ║');
   console.log('╠══════════════════════════════════════════════════╣');
