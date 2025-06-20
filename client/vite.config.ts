@@ -31,6 +31,11 @@ export default defineConfig(({ mode }) => {
     );
   }
   
+  // Disable source maps in production
+  if (isProduction) {
+    process.env.GENERATE_SOURCEMAP = 'false';
+  }
+  
   return {
     base: '/',
     
@@ -65,9 +70,13 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
-      sourcemap: isProduction ? 'hidden' : true,
+      sourcemap: isProduction ? false : 'inline',
       minify: isProduction ? 'esbuild' : false,
       cssCodeSplit: true,
+      cssMinify: isProduction,
+      reportCompressedSize: true,
+      target: 'esnext',
+      chunkSizeWarningLimit: 1000,
       rollupOptions: {
         output: {
           manualChunks: {
@@ -75,9 +84,7 @@ export default defineConfig(({ mode }) => {
             ffmpeg: ['@ffmpeg/ffmpeg', '@ffmpeg/core']
           }
         }
-      },
-      target: 'esnext',
-      chunkSizeWarningLimit: 1000
+      }
     },
     
     // ESBuild configuration
