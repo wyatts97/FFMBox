@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: ./server/Dockerfile
-      target: production
+      target: builder
     environment:
       - NODE_ENV=production
       - PORT=6900
