@@ -1,7 +1,7 @@
 # Stage 1: Tiny FFmpeg builder
 FROM alpine:3.19 as ffmpeg_builder
 RUN apk add --no-cache wget tar xz && \
-    wget https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz -O /tmp/ffmpeg.tar.xz && \
+    wget https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz && \
     mkdir -p /ffmpeg-dist && \
     tar -xJf /tmp/ffmpeg.tar.xz -C /ffmpeg-dist --strip-components=1 && \
     rm /tmp/ffmpeg.tar.xz
