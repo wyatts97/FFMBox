@@ -12,12 +12,22 @@
 ## ✨ Features
 
 - 🎥 **Video Conversion**: Convert between various video formats (MP4, MKV, WebM, etc.)
+- 🖼️ **Image Processing**: Advanced image conversion and optimization (WebP, AVIF, JPEG, PNG)
 - 🎵 **Audio Extraction**: Extract audio from video files
 - ⚡ **Real-time Progress**: Live updates via WebSocket during conversion
 - 🎨 **Modern UI**: Clean, responsive interface with dark/light theme support
 - 🐳 **Docker First**: Fully containerized with multi-stage builds
 - 🔄 **Batch Processing**: Convert multiple files simultaneously
 - 📱 **Mobile Friendly**: Works on all device sizes
+
+### 🖼️ Image Processing Capabilities
+
+- **Format Conversion**: Convert between WebP, AVIF, JPEG, PNG, and more
+- **Smart Compression**: Optimize images with quality controls
+- **Resizing**: Scale images with aspect ratio preservation
+- **Optimization**: Automatic format selection for web
+- **Progressive Loading**: For faster perceived load times
+- **Lossless Options**: Preserve maximum quality when needed
 
 ## 🚀 Quick Start
 
@@ -98,6 +108,41 @@ FFMBox/
 ### Authentication
 All endpoints require a valid API key in the `X-API-Key` header.
 
+### Image Processing Options
+
+When converting images, you can use these options in your API requests:
+
+```json
+{
+  "quality": 85,          // Image quality (1-100)
+  "width": 800,          // Target width (maintains aspect ratio if height not specified)
+  "height": 600,         // Target height
+  "maintainAspect": true, // Maintain aspect ratio when resizing
+  "padColor": "white",    // Background color when maintaining aspect ratio
+  "compressionLevel": 6,  // Compression level (0-9)
+  "lossless": false,     // Use lossless compression (WebP)
+  "progressive": true,   // Use progressive encoding (JPEG)
+  "subsample": 6,        // Chroma subsampling (1-6)
+  "speed": 6             // Speed/quality tradeoff (0=best quality, 8=fastest)
+}
+```
+
+### Presets
+
+#### Video Presets
+- `mp4`: Standard MP4 output (H.264)
+- `webm`: WebM format (VP9)
+- `gif`: Animated GIF
+- `mute`: Video without audio
+
+#### Image Presets
+- `webp`: WebP format (modern, efficient)
+- `avif`: AVIF format (next-gen, best compression)
+- `jpeg`: Standard JPEG
+- `png`: PNG format (lossless)
+- `image-optimized`: Automatically selects best format for web
+- `image-lossless`: Preserves maximum quality
+
 ### Endpoints
 
 #### File Upload
@@ -131,7 +176,27 @@ Content-Type: application/json
 
 {
   "fileId": "file-id",
-  "preset": "mp4_720p"
+  "preset": "webp",
+  "options": {
+    "quality": 85,
+    "width": 1200,
+    "maintainAspect": true
+  }
+}
+```
+
+Example for creating a thumbnail:
+
+```json
+{
+  "fileId": "image-123",
+  "preset": "jpeg",
+  "options": {
+    "width": 300,
+    "height": 300,
+    "maintainAspect": true,
+    "padColor": "#ffffff"
+  }
 }
 ```
 
