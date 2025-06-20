@@ -1,23 +1,17 @@
-# Stage 1: FFmpeg builder using Alpine Linux
-FROM alpine:3.19 as ffmpeg_builder
-RUN apk add --no-cache ffmpeg
-
-# Stage 2: Dependencies
+# Stage 1: Dependencies
 FROM node:20-alpine as deps
 WORKDIR /app
 COPY server/package*.json ./
 # First try npm ci, if it fails, fall back to npm install
 RUN npm ci --omit=dev || npm install --omit=dev
 
-# Stage 3: Builder
+# Stage 2: Builder with FFmpeg
 FROM node:20-alpine as builder
 WORKDIR /app
-COPY --from=ffmpeg_builder /usr/bin/ffmpeg /usr/bin/ffmpeg
-COPY --from=ffmpeg_builder /usr/bin/ffprobe /usr/bin/ffprobe
-COPY --from=ffmpeg_builder /usr/lib/ /usr/lib/
 
-# Install runtime dependencies
+# Install FFmpeg and runtime dependencies first
 RUN apk add --no-cache \
+    ffmpeg \
     libgcc \
     libstdc++ \
     ca-certificates \
@@ -30,17 +24,13 @@ RUN apk add --no-cache \
 COPY --from=deps /app/node_modules ./node_modules
 COPY server/ .
 
-# Stage 4: Production image
+# Stage 3: Production image
 FROM node:20-alpine
 WORKDIR /app
 
-# Copy FFmpeg and dependencies
-COPY --from=ffmpeg_builder /usr/bin/ffmpeg /usr/bin/ffmpeg
-COPY --from=ffmpeg_builder /usr/bin/ffprobe /usr/bin/ffprobe
-COPY --from=ffmpeg_builder /usr/lib/ /usr/lib/
-
 # Install runtime dependencies
 RUN apk add --no-cache \
+    ffmpeg \
     libgcc \
     libstdc++ \
     ca-certificates \
