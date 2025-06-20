@@ -17,12 +17,7 @@ const uploadsDir = path.join(__dirname, 'uploads');
 const outputDir = path.join(__dirname, 'output');
 const distDir = path.join(__dirname, '..', 'dist');
 
-// Ensure frontend build exists before starting server
-const distIndex = path.join(distDir, 'index.html');
-if (!fs.existsSync(distIndex)) {
-  console.error('\n[ERROR] Frontend build not found!\nPlease run "npm run build" in the project root before starting the backend.\nExpected file: ' + distIndex + '\n');
-  process.exit(1);
-}
+
 
 fs.ensureDirSync(uploadsDir);
 fs.ensureDirSync(outputDir);
