@@ -1,17 +1,17 @@
-# Stage 1: Tiny FFmpeg builder
-FROM alpine:3.19 as ffmpeg_builder
-RUN apk add --no-cache wget tar xz && \
-    wget https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz && \
-    mkdir -p /ffmpeg-dist && \
-    tar -xJf /tmp/ffmpeg.tar.xz -C /ffmpeg-dist --strip-components=1 && \
-    rm /tmp/ffmpeg.tar.xz
+# Stage 1: FFmpeg builder using official Debian packages
+FROM debian:bookworm-slim as ffmpeg_builder
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ffmpeg && \
+    mkdir -p /ffmpeg-dist/usr/bin /ffmpeg-dist/usr/lib && \
+    cp /usr/bin/ffmpeg /usr/bin/ffprobe /ffmpeg-dist/usr/bin/ && \
+    ldd /usr/bin/ffmpeg | awk '/=>/ {print $3}' | xargs -I{} cp --parents {} /ffmpeg-dist/ && \
+    rm -rf /var/lib/apt/lists/*
 
-# Stage 2: Main image
+# Stage 2: Main application image
 FROM node:20-slim
 
-# Copy FFmpeg binary
-COPY --from=ffmpeg_builder /ffmpeg-dist/ffmpeg /usr/local/bin/
-COPY --from=ffmpeg_builder /ffmpeg-dist/ffprobe /usr/local/bin/
+# Copy FFmpeg and its dependencies
+COPY --from=ffmpeg_builder /ffmpeg-dist/ /
 
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -22,7 +22,7 @@ RUN mkdir -p /app/uploads /app/output && \
 
 COPY . .
 
-# Instant user setup
+# User setup
 RUN echo "nodejs:x:999:999::/app:/bin/false" >> /etc/passwd && \
     echo "nodejs:x:999:" >> /etc/group && \
     chown -R 999:999 /app
