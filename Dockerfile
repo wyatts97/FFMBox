@@ -15,32 +15,9 @@ COPY index.html ./
 RUN npm install
 RUN npm run build && ls -l /app/dist && [ -f /app/dist/index.html ]
 
-# ---- Backend stage ----
-FROM node:20 AS backend
+# ---- NGINX stage ----
+FROM nginx:alpine AS nginx
+COPY --from=frontend /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/nginx.conf
 
-# Install ffmpeg (Debian-based for Node 20)
-RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-# Copy backend dependencies and source
-COPY server/package.json server/package-lock.json ./server/
-WORKDIR /app/server
-RUN npm install
-
-# Copy built frontend
-WORKDIR /app
-COPY --from=frontend /app/dist ./dist
-
-# Copy backend source
-COPY server/. ./server/
-
-# Ensure upload/output dirs exist
-RUN mkdir -p /app/server/uploads /app/server/output
-
-WORKDIR /app/server
-
-EXPOSE 6900
-
-CMD ["node", "server.js"]
 

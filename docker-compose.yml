@@ -1,22 +1,23 @@
 services:
   ffmbox:
-    build: .
-
+    build:
+      context: ./server
     volumes:
-      - ./uploads:/app/server/uploads
-      - ./output:/app/server/output
+      - ./uploads:/app/uploads
+      - ./output:/app/output
     environment:
       - NODE_ENV=production
       - PORT=6900
     restart: unless-stopped
     
   nginx:
-    image: nginx:alpine
+    build:
+      context: .
+      target: nginx
     ports:
       - "6900:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./dist:/usr/share/nginx/html
     depends_on:
       - ffmbox
     restart: unless-stopped
