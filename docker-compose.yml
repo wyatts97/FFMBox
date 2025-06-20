@@ -7,31 +7,52 @@ services:
     environment:
       - NODE_ENV=development
       - DEBUG=*
-      - PORT=6900
+      - PORT=5500
       - UPLOAD_DIR=/app/uploads
       - OUTPUT_DIR=/app/output
       - MAX_FILE_SIZE=500MB
       - FFMPEG_THREADS=2
       - CORS_ORIGIN=*
     volumes:
-      - ./server:/app
-      - ffmbox_uploads:/app/uploads
-      - ffmbox_output:/app/output
-    restart: unless-stopped
+      - ./uploads:/app/uploads
+      - ./output:/app/output
     ports:
-      - "6900:6900"
-      - "9229:9229"  # For Node.js debugger
+      - "5500:5500"
+      - "9229:9229" # For Node.js debugger
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:6900/api/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:5500/api/health",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 60s
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - NET_BIND_SERVICE
+    tmpfs:
+      - /tmp
+      - /run
+      - /var/run
+    user: "1000:1000" # Run as non-root user with UID 1000
 
   nginx:
     build:
@@ -47,7 +68,3 @@ services:
     restart: unless-stopped
     environment:
       - NGINX_ENV=production
-
-volumes:
-  ffmbox_uploads:
-  ffmbox_output:
