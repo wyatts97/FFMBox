@@ -1,104 +1,186 @@
+<div align="center">
+  <h1>FFMBox</h1>
+  # FFMBox
 
-# FFMBox - Web Version
+> 🚀 A modern, containerized FFmpeg web interface for media conversion
 
-A web-based FFmpeg video converter that runs in Docker containers, providing a modern UI for media file conversion.
+[![Docker Pulls](https://img.shields.io/docker/pulls/yourusername/ffmbox?style=flat-square)](https://hub.docker.com/r/yourusername/ffmbox)  
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)  
+[![GitHub stars](https://img.shields.io/github/stars/wyatts97/FFMBox?style=social)](https://github.com/wyatts97/FFMBox/stargazers)
+</div>
 
-## Features
+## ✨ Features
 
-- 🎬 **Multiple Format Support**: Convert between MP4, WebM, GIF, and audio formats
-- 🎯 **Batch Processing**: Upload and convert multiple files simultaneously
-- 📊 **Real-time Progress**: WebSocket-powered live conversion updates
-- 🎨 **Modern UI**: YouTube-inspired dark/light theme interface
-- ⚡ **Fast Processing**: FFmpeg-powered backend for efficient conversion
-- 🐳 **Docker Ready**: Fully containerized for easy deployment
+- 🎥 **Video Conversion**: Convert between various video formats (MP4, MKV, WebM, etc.)
+- 🎵 **Audio Extraction**: Extract audio from video files
+- ⚡ **Real-time Progress**: Live updates via WebSocket during conversion
+- 🎨 **Modern UI**: Clean, responsive interface with dark/light theme support
+- 🐳 **Docker First**: Fully containerized with multi-stage builds
+- 🔄 **Batch Processing**: Convert multiple files simultaneously
+- 📱 **Mobile Friendly**: Works on all device sizes
 
-## Quick Start with Docker
-
-### Option 1: Docker Compose (Recommended)
-
-```bash
-# Clone the repository
-git clone https://github.com/wyatts97/FFMBox.git
-cd FFMBox
-
-# Start the application
-docker-compose up -d
-
-# Access the app at http://localhost:6900
-```
-
-### Option 2: Docker Build
-
-```bash
-# Build the image
-docker build -t ffmbox .
-
-# Run the container
-docker run -p 6900:6900 -v $(pwd)/uploads:/app/server/uploads -v $(pwd)/output:/app/server/output ffmbox
-
-# Access the app at http://localhost:6900
-```
-
-## Development Setup
+## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+
-- FFmpeg installed on your system
+- Docker and Docker Compose
+- At least 2GB of free disk space for processing
 
-### Local Development
+### Using Docker Compose (Recommended)
+
+```bash
+git clone https://github.com/wyatts97/FFMBox.git
+cd FFMBox
+docker-compose up -d
+```
+
+The application will be available at: `http://localhost:6900`
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | 6900 | Backend server port |
+| `UPLOAD_DIR` | /app/uploads | Upload directory path |
+| `OUTPUT_DIR` | /app/output | Output directory path |
+| `MAX_FILE_SIZE` | 500MB | Maximum file size for uploads |
+| `FFMPEG_THREADS` | 2 | Number of FFmpeg threads to use |
+
+---
+
+## 🛠️ Development
+
+### Prerequisites
+- Node.js 20+
+- pnpm (recommended) or npm
+- FFmpeg
+
+### Setup
 
 ```bash
 # Install dependencies
-npm install
-cd server && npm install && cd ..
+pnpm install
 
-# Start the backend server
-cd server && npm run dev &
-
-# Start the React development server
-npm run dev
-
-# Access the app at http://localhost:5173
+# Start development servers
+pnpm dev
 ```
 
-## Architecture
+This will start:
+- Frontend: http://localhost:5173
+- Backend: http://localhost:6900
 
+### Building for Production
+
+```bash
+# Build the application
+pnpm build
+
+# Start in production mode
+pnpm start
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   React Frontend │    │  Express API    │    │     FFmpeg      │
-│   (Port 80/5173) │────│  (Port 6900)    │────│   Processing    │
-│                 │    │                 │    │                 │
-│ • File Upload   │    │ • File Handling │    │ • Video Convert │
-│ • Progress UI   │    │ • WebSocket     │    │ • Audio Extract │
-│ • Download      │    │ • Conversion    │    │ • Format Change │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+
+## 📂 Project Structure
+
+```text
+FFMBox/
+├── client/              # React frontend
+│   ├── public/          # Static files
+│   ├── src/             # Source code
+│   └── Dockerfile       # Frontend Dockerfile
+├── server/              # Express backend
+│   ├── src/             # Source code
+│   └── Dockerfile       # Backend Dockerfile
+├── docker-compose.yml   # Docker Compose configuration
+└── README.md           # This file
 ```
 
-## API Endpoints
+## 🌐 API Documentation
 
-### File Management
-- `POST /api/upload` - Upload media files
-- `GET /api/ffmpeg-status` - Check FFmpeg availability
+### Authentication
+All endpoints require a valid API key in the `X-API-Key` header.
 
-### Conversion
-- `POST /api/convert` - Start file conversion
-- `GET /api/conversion/:id` - Get conversion status
-- `GET /output/:filename` - Download converted files
+### Endpoints
 
-### WebSocket
-- `/ws` - Real-time progress updates
+#### File Upload
 
-## Supported Conversions
+```http
+POST /api/upload
+Content-Type: multipart/form-data
+```
 
-| Preset | Description | Output Format |
-|--------|-------------|---------------|
-| MP4 | Standard video format | .mp4 |
-| WebM | Web-optimized video | .webm |
-| GIF | Animated GIF | .gif |
-| Audio Extract | Extract audio only | .mp3 |
-| Mute | Remove audio track | .mp4 |
+**Response:**
 
-## Configuration
+```json
+{
+  "files": [
+    {
+      "id": "unique-file-id",
+      "originalName": "video.mp4",
+      "filename": "abc123-video.mp4",
+      "size": 1024000,
+      "path": "/path/to/upload"
+    }
+  ]
+}
+```
+
+#### Start Conversion
+
+```http
+POST /api/convert
+Content-Type: application/json
+
+{
+  "fileId": "file-id",
+  "preset": "mp4_720p"
+}
+```
+
+**Response:**
+
+```json
+{
+  "conversionId": "conversion-123",
+  "status": "queued"
+}
+```
+
+#### Get Conversion Status
+
+```http
+GET /api/conversion/:id
+```
+
+**Response:**
+
+```json
+{
+  "id": "conversion-123",
+  "status": "processing|completed|error",
+  "progress": 75,
+  "downloadUrl": "/output/converted-file.mp4"
+}
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [FFmpeg](https://ffmpeg.org/) - For the amazing media processing capabilities
+- [Vite](https://vitejs.dev/) - For the lightning-fast build tooling
+- [Shadcn UI](https://ui.shadcn.com/) - For the beautiful UI components
+- [React](https://reactjs.org/) - For the awesome UI library
+
+## ⚙️ Configuration
 
 ### Environment Variables
 
