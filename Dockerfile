@@ -13,7 +13,7 @@ COPY public ./public
 COPY index.html ./
 
 RUN npm install
-RUN npm run build
+RUN npm run build && ls -l /app/dist && [ -f /app/dist/index.html ]
 
 # ---- Backend stage ----
 FROM node:20 AS backend
