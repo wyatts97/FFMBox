@@ -1,27 +1,38 @@
-FROM node:20-slim
-
-# Install latest FFmpeg from Debian repos
+# Stage 1: Build FFmpeg and its dependencies
+FROM debian:bookworm-slim as ffmpeg_builder
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ffmpeg && \
-    rm -rf /var/lib/apt/lists/* && \
-    apt-get clean
+    mkdir -p /ffmpeg-dist/usr/bin /ffmpeg-dist/usr/lib && \
+    cp /usr/bin/ffmpeg /ffmpeg-dist/usr/bin/ && \
+    cp -r /usr/lib/x86_64-linux-gnu/ /ffmpeg-dist/usr/lib/ && \
+    rm -rf /var/lib/apt/lists/*
+
+# Stage 2: Main application image
+FROM node:20-slim
+
+# Copy FFmpeg from builder
+COPY --from=ffmpeg_builder /ffmpeg-dist /
+
+# Set library path
+ENV LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu
 
 WORKDIR /app
 
-# 2. Copy dependency files first (better caching)
+# Copy dependency files first (better caching)
 COPY package.json package-lock.json ./
 
-# 3. Install production dependencies + clean cache
-RUN npm ci --omit=dev && npm cache clean --force
+# Install production dependencies
+RUN npm ci --omit=dev && \
+    npm cache clean --force
 
-# 4. Create directories with correct permissions
+# Create directories
 RUN mkdir -p /app/uploads /app/output && \
     chmod -R 755 /app/uploads /app/output
 
-# 5. Copy application files
+# Copy application files
 COPY . .
 
-# 6. Non-root user setup
+# Non-root user setup
 RUN set -x ; \
     addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 --ingroup nodejs nodejs && \
@@ -29,7 +40,7 @@ RUN set -x ; \
 
 USER nodejs
 
-# 7. Health check
+# Health check
 HEALTHCHECK --interval=30s --timeout=3s \
     CMD curl -f http://localhost:6900/api/health || exit 1
 
