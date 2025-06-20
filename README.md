@@ -1,11 +1,11 @@
 <div align="center">
-  <h1>FFMBox</h1>
+  <img src="512x512.webp" alt="FFMBox Logo" width="200" height="200">
+  
   # FFMBox
 
-> 🚀 A modern, containerized FFmpeg web interface for media conversion
+> 🚀 A modern, containerized FFmpeg Web UI for media conversion or compression with the ability for custom commands.
 
-[![Docker Pulls](https://img.shields.io/docker/pulls/yourusername/ffmbox?style=flat-square)](https://hub.docker.com/r/yourusername/ffmbox)  
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)  
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0)  
 [![GitHub stars](https://img.shields.io/github/stars/wyatts97/FFMBox?style=social)](https://github.com/wyatts97/FFMBox/stargazers)
 </div>
 
@@ -277,4 +277,4 @@ docker-compose logs -f nginx
 
 ## License
 
-GNU General Public - see LICENSE file for details
+GNU General Public License v3.0 - see LICENSE file for details
