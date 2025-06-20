@@ -1,22 +1,22 @@
 # Stage 1: Dependencies
-FROM node:20-alpine as deps
+FROM node:20.12.2-alpine3.18 as deps
 WORKDIR /app
 COPY server/package*.json ./
 # First try npm ci, if it fails, fall back to npm install
 RUN npm ci --omit=dev || npm install --omit=dev
 
 # Stage 2: Builder with FFmpeg
-FROM node:20-alpine as builder
+FROM node:20.12.2-alpine3.18 as builder
 WORKDIR /app
 
-# Install FFmpeg and runtime dependencies first
-RUN apk add --no-cache \
+# Update and install dependencies
+RUN apk update && apk upgrade && \
+    apk add --no-cache \
     ffmpeg \
     libgcc \
     libstdc++ \
     ca-certificates \
-    libcrypto3 \
-    libssl3 \
+    openssl \
     tzdata \
     && rm -rf /var/cache/apk/*
 
@@ -25,17 +25,17 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY server/ .
 
 # Stage 3: Production image
-FROM node:20-alpine
+FROM node:20.12.2-alpine3.18
 WORKDIR /app
 
 # Install runtime dependencies
-RUN apk add --no-cache \
+RUN apk update && apk upgrade && \
+    apk add --no-cache \
     ffmpeg \
     libgcc \
     libstdc++ \
     ca-certificates \
-    libcrypto3 \
-    libssl3 \
+    openssl \
     tzdata \
     && rm -rf /var/cache/apk/*
 
