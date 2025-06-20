@@ -1,15 +1,15 @@
 # Stage 1: Tiny FFmpeg builder
 FROM alpine:3.19 as ffmpeg_builder
-RUN apk add --no-cache wget tar && \
-    wget https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz -O /tmp/ffmpeg.tar.xz && \
+RUN apk add --no-cache wget tar xz && \
+    wget https://johnvansickle.com/ffmpeg/releases/ffmpeg-6.1.1-amd64-static.tar.xz -O /tmp/ffmpeg.tar.xz && \
     mkdir -p /ffmpeg-dist && \
-    tar xf /tmp/ffmpeg.tar.xz -C /ffmpeg-dist --strip-components=1 && \
+    tar -xJf /tmp/ffmpeg.tar.xz -C /ffmpeg-dist --strip-components=1 && \
     rm /tmp/ffmpeg.tar.xz
 
 # Stage 2: Main image
 FROM node:20-slim
 
-# Copy FFmpeg binary and libraries
+# Copy FFmpeg binary
 COPY --from=ffmpeg_builder /ffmpeg-dist/ffmpeg /usr/local/bin/
 COPY --from=ffmpeg_builder /ffmpeg-dist/ffprobe /usr/local/bin/
 
