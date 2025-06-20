@@ -19,7 +19,7 @@ if (missingVars.length > 0) {
 
 // Configuration
 const app = express();
-const PORT = parseInt(process.env.PORT, 10) || 6900;
+const PORT = parseInt(process.env.PORT, 10) || 5500;
 const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR);
 const OUTPUT_DIR = path.resolve(process.env.OUTPUT_DIR);
 const MAX_FILE_SIZE = process.env.MAX_FILE_SIZE || '500MB';
@@ -27,15 +27,36 @@ const FFMPEG_THREADS = parseInt(process.env.FFMPEG_THREADS, 10) || 2;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 
 // Ensure directories exist with proper permissions
-try {
-  fs.ensureDirSync(UPLOAD_DIR);
-  fs.ensureDirSync(OUTPUT_DIR);
-  
-  // Set directory permissions (read/write/execute for owner, read/execute for group/others)
-  fs.chmodSync(UPLOAD_DIR, 0o755);
-  fs.chmodSync(OUTPUT_DIR, 0o755);
-} catch (error) {
-  console.error('Error setting up directories:', error);
+const ensureDirectories = () => {
+  try {
+    // Create directories if they don't exist
+    fs.ensureDirSync(UPLOAD_DIR);
+    fs.ensureDirSync(OUTPUT_DIR);
+    
+    // Set directory permissions (read/write/execute for owner and group, read/execute for others)
+    fs.chmodSync(UPLOAD_DIR, 0o755);
+    fs.chmodSync(OUTPUT_DIR, 0o755);
+    
+    // Only try to change ownership if running as root
+    if (process.getuid && process.getuid() === 0) {
+      // Use node user (UID 1000) which is common in Node.js Docker images
+      const uid = 1000;
+      const gid = 1000;
+      fs.chownSync(UPLOAD_DIR, uid, gid);
+      fs.chownSync(OUTPUT_DIR, uid, gid);
+    }
+    
+    console.log(`Directory permissions set successfully`);
+    return true;
+  } catch (error) {
+    console.error('Error setting up directories:', error);
+    return false;
+  }
+};
+
+// Initialize directories
+if (!ensureDirectories()) {
+  console.error('Failed to initialize required directories. Exiting...');
   process.exit(1);
 }
 
@@ -47,10 +68,6 @@ console.log(`- Output directory: ${OUTPUT_DIR}`);
 console.log(`- Max file size: ${MAX_FILE_SIZE}`);
 console.log(`- FFmpeg threads: ${FFMPEG_THREADS}`);
 console.log(`- CORS Origin: ${CORS_ORIGIN}`);
-
-// Ensure directories exist
-fs.ensureDirSync(UPLOAD_DIR);
-fs.ensureDirSync(OUTPUT_DIR);
 
 // Middleware
 const corsOptions = {
@@ -640,7 +657,8 @@ app.get('/api/health', (req, res) => {
       timestamp: new Date().toISOString(),
       ffmpeg: {
         available: !!ffmpeg,
-        version: process.env.FFMPEG_VERSION || 'unknown'
+        version: err ? null : ffmpeg.version(),
+        formats: err ? null : Object.keys(formats).slice(0, 20)
       },
       directories: {
         uploads: {
@@ -723,6 +741,16 @@ app.post('/api/cleanup', async (req, res) => {
 
 // Start server
 server.listen(PORT, '0.0.0.0', () => {
+  // Log any uncaught exceptions
+  process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+    process.exit(1);
+  });
+
+  // Log unhandled promise rejections
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  });
   console.log('╔══════════════════════════════════════════════════╗');
   console.log('║               FFMBox Server Started               ║');
   console.log('╠══════════════════════════════════════════════════╣');
@@ -744,5 +772,31 @@ server.listen(PORT, '0.0.0.0', () => {
     }
     console.log(stdout.split('\n').slice(0, 5).join('\n'));
   });
+  
+  console.log(`HTTP Server running on port ${PORT}`);
   console.log(`WebSocket server active on port ${PORT}`);
+  console.log(`Health check available at http://localhost:${PORT}/api/health`);
+});
+
+// Handle server errors
+httpServer.on('error', (error) => {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  const bind = typeof PORT === 'string' ? 'Pipe ' + PORT : 'Port ' + PORT;
+
+  // Handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
 });
