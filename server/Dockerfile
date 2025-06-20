@@ -12,8 +12,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # 3. Install production dependencies + clean cache
-RUN npm ci --only=production && \
-    npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force
 
 # 4. Create directories with correct permissions
 RUN mkdir -p /app/uploads /app/output && \
