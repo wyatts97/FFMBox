@@ -22,8 +22,9 @@ RUN mkdir -p /app/uploads /app/output && \
 COPY . .
 
 # 6. Non-root user setup
-RUN groupadd -r nodejs && \
-    useradd -r -g nodejs -d /app nodejs && \
+RUN set -x ; \
+    addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 --ingroup nodejs nodejs && \
     chown -R nodejs:nodejs /app
 
 USER nodejs
