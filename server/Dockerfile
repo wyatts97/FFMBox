@@ -6,7 +6,8 @@ RUN apk add --no-cache ffmpeg
 FROM node:20-alpine as deps
 WORKDIR /app
 COPY server/package*.json ./
-RUN npm ci --omit=dev
+# First try npm ci, if it fails, fall back to npm install
+RUN npm ci --omit=dev || npm install --omit=dev
 
 # Stage 3: Builder
 FROM node:20-alpine as builder
