@@ -277,4 +277,4 @@ docker-compose logs -f nginx
 
 ## License
 
-MIT License - see LICENSE file for details
+GNU General Public - see LICENSE file for details
