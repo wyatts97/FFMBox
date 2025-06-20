@@ -2,10 +2,15 @@
 FROM alpine:3.19 as ffmpeg_builder
 RUN apk add --no-cache ffmpeg
 
-# Stage 2: Main application image
-FROM node:20-alpine
+# Stage 2: Dependencies
+FROM node:20-alpine as deps
+WORKDIR /app
+COPY server/package*.json ./
+RUN npm ci --omit=dev
 
-# Copy FFmpeg and its dependencies from builder
+# Stage 3: Builder
+FROM node:20-alpine as builder
+WORKDIR /app
 COPY --from=ffmpeg_builder /usr/bin/ffmpeg /usr/bin/ffmpeg
 COPY --from=ffmpeg_builder /usr/bin/ffprobe /usr/bin/ffprobe
 COPY --from=ffmpeg_builder /usr/lib/ /usr/lib/
@@ -20,18 +25,36 @@ RUN apk add --no-cache \
     tzdata \
     && rm -rf /var/cache/apk/*
 
+# Copy dependencies
+COPY --from=deps /app/node_modules ./node_modules
+COPY server/ .
+
+# Stage 4: Production image
+FROM node:20-alpine
 WORKDIR /app
 
-# Install Node.js dependencies
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+# Copy FFmpeg and dependencies
+COPY --from=ffmpeg_builder /usr/bin/ffmpeg /usr/bin/ffmpeg
+COPY --from=ffmpeg_builder /usr/bin/ffprobe /usr/bin/ffprobe
+COPY --from=ffmpeg_builder /usr/lib/ /usr/lib/
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    libgcc \
+    libstdc++ \
+    ca-certificates \
+    libcrypto3 \
+    libssl3 \
+    tzdata \
+    && rm -rf /var/cache/apk/*
+
+# Copy built files
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/ .
 
 # Create necessary directories with correct permissions
 RUN mkdir -p /app/uploads /app/output && \
     chown -R node:node /app
-
-# Copy application files
-COPY --chown=node:node . .
 
 # Switch to non-root user
 USER node

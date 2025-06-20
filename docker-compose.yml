@@ -1,14 +1,17 @@
 services:
   ffmbox:
     build:
-      context: ./server
-      args:
-        - NODE_ENV=production
+      context: .
+      dockerfile: ./server/Dockerfile
+      target: production
     environment:
       - NODE_ENV=production
       - PORT=6900
       - UPLOAD_DIR=/app/uploads
       - OUTPUT_DIR=/app/output
+      - MAX_FILE_SIZE=500MB
+      - FFMPEG_THREADS=2
+      - CORS_ORIGIN=http://localhost:3000
     volumes:
       - ffmbox_uploads:/app/uploads
       - ffmbox_output:/app/output
@@ -16,17 +19,26 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2'
+          cpus: "2"
           memory: 2G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6900/api/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:6900/api/health",
+        ]
       interval: 30s
       timeout: 3s
       retries: 3
 
   nginx:
     build:
-      context: .
+      context: ./client
+      dockerfile: Dockerfile
       args:
         - VITE_API_BASE_URL=/api
     ports:
@@ -35,6 +47,8 @@ services:
       ffmbox:
         condition: service_healthy
     restart: unless-stopped
+    environment:
+      - NGINX_ENV=production
 
 volumes:
   ffmbox_uploads:
