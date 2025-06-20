@@ -626,15 +626,51 @@ app.get('/api/conversion/:id', (req, res) => {
   res.json(conversion || { error: 'Conversion not found' });
 });
 
+// Enhanced health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    directories: {
-      uploads: UPLOAD_DIR,
-      output: OUTPUT_DIR
-    }
-  });
+  try {
+    // Check if directories exist and are writable
+    const checkDir = (dir) => {
+      try {
+        fs.accessSync(dir, fs.constants.R_OK | fs.constants.W_OK);
+        return { exists: true, writable: true };
+      } catch (err) {
+        console.error(`Directory check failed for ${dir}:`, err);
+        return { exists: false, writable: false, error: err.message };
+      }
+    };
+
+    const uploadsCheck = checkDir(UPLOAD_DIR);
+    const outputCheck = checkDir(OUTPUT_DIR);
+
+    const isHealthy = uploadsCheck.writable && outputCheck.writable;
+
+    res.status(isHealthy ? 200 : 503).json({ 
+      status: isHealthy ? 'healthy' : 'unhealthy',
+      timestamp: new Date().toISOString(),
+      ffmpeg: {
+        available: !!ffmpeg,
+        version: process.env.FFMPEG_VERSION || 'unknown'
+      },
+      directories: {
+        uploads: {
+          path: UPLOAD_DIR,
+          ...uploadsCheck
+        },
+        output: {
+          path: OUTPUT_DIR,
+          ...outputCheck
+        }
+      }
+    });
+  } catch (err) {
+    console.error('Health check error:', err);
+    res.status(500).json({ 
+      status: 'error',
+      error: 'Health check failed',
+      message: err.message 
+    });
+  }
 });
 
 // Clean up old files
