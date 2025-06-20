@@ -1,8 +1,7 @@
 services:
   ffmbox:
     build: .
-    ports:
-      - "6900:6900"
+
     volumes:
       - ./uploads:/app/server/uploads
       - ./output:/app/server/output
