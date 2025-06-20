@@ -386,14 +386,45 @@ function broadcastProgress(conversionId, data) {
 
 // FFmpeg Command Builder
 function createFFmpegCommand(input, output, preset, options = {}) {
+  const isImage = ['jpeg', 'jpg', 'png', 'webp', 'avif', 'tiff', 'bmp', 'gif'].includes(
+    path.extname(input).toLowerCase().substring(1)
+  );
+
   let command = ffmpeg(input)
     .outputOptions([
       '-threads', FFMPEG_THREADS,
-      '-preset', process.env.FFMPEG_PRESET || 'medium',
+      '-preset', process.env.FFMPEG_PRESET || (isImage ? 'slow' : 'medium'),
       '-movflags', '+faststart'
     ]);
 
+  // Common options
+  const width = options.width || options.size?.split('x')[0];
+  const height = options.height || options.size?.split('x')[1];
+  const quality = options.quality || (isImage ? 85 : undefined);
+  
+  // Add resize filter if dimensions are provided
+  if (width || height) {
+    const scaleFilter = [];
+    if (width && height) {
+      scaleFilter.push(`scale=${width}:${height}:force_original_aspect_ratio=decrease`);
+    } else if (width) {
+      scaleFilter.push(`scale=${width}:-1`);
+    } else if (height) {
+      scaleFilter.push(`scale=-1:${height}`);
+    }
+    
+    // Add padding if maintainAspect is true
+    if (options.maintainAspect && (width || height)) {
+      scaleFilter.push(`pad=${width || 'iw'}:${height || 'ih'}:(ow-iw)/2:(oh-ih)/2:${options.padColor || 'black'}`);
+    }
+    
+    if (scaleFilter.length > 0) {
+      command = command.videoFilters(scaleFilter.join(','));
+    }
+  }
+
   switch (preset) {
+    // Video presets
     case 'mp4':
       command = command
         .videoCodec('libx264')
@@ -401,6 +432,7 @@ function createFFmpegCommand(input, output, preset, options = {}) {
         .format('mp4')
         .outputOptions('-crf 23');
       break;
+      
     case 'webm':
       command = command
         .videoCodec('libvpx-vp9')
@@ -408,6 +440,7 @@ function createFFmpegCommand(input, output, preset, options = {}) {
         .format('webm')
         .outputOptions(['-b:v 1M', '-crf 30']);
       break;
+      
     case 'gif':
       command = command
         .videoFilters([
@@ -417,6 +450,7 @@ function createFFmpegCommand(input, output, preset, options = {}) {
         ])
         .format('gif');
       break;
+      
     case 'audio-extract':
       command = command
         .noVideo()
@@ -424,14 +458,57 @@ function createFFmpegCommand(input, output, preset, options = {}) {
         .format('mp3')
         .audioQuality(3);
       break;
+      
     case 'mute':
       command = command
         .noAudio()
         .videoCodec('libx264')
         .format('mp4');
       break;
+      
+    // Image presets
+    case 'webp':
+      command = command
+        .format('webp')
+        .outputOptions([
+          `-quality ${quality}`,
+          `-compression_level ${options.compressionLevel || 6}`,
+          options.lossless ? '-lossless 1' : ''
+        ].filter(Boolean));
+      break;
+      
+    case 'jpeg':
+    case 'jpg':
+      command = command
+        .format('mjpeg')
+        .outputOptions([
+          `-q:v ${quality}`,
+          options.progressive ? '-pix_fmt yuvj420p' : '',
+          options.subsample ? `-subq ${options.subsample}` : ''
+        ].filter(Boolean));
+      break;
+      
+    case 'png':
+      command = command
+        .format('png')
+        .outputOptions([
+          `-compression_level ${options.compressionLevel || 9}`,
+          options.interlace ? '-interlace plane' : ''
+        ].filter(Boolean));
+      break;
+      
+    case 'avif':
+      command = command
+        .format('avif')
+        .outputOptions([
+          `-qp ${31 - Math.floor((quality / 100) * 31)}`,
+          `-speed ${options.speed || 6}`
+        ].filter(Boolean));
+      break;
+      
     default:
-      command = command.format('mp4');
+      // For unknown presets, try to use the preset name as the format
+      command = command.format(preset);
   }
 
   if (options.startTime) command.seekInput(options.startTime);
@@ -448,23 +525,74 @@ function createFFmpegCommand(input, output, preset, options = {}) {
 
 function generateOutputFilename(originalFilename, preset) {
   const baseName = path.parse(originalFilename).name;
+  const ext = path.extname(originalFilename).toLowerCase();
+  
+  // Map presets to file extensions
   const extensions = {
+    // Video formats
     mp4: 'mp4',
     webm: 'webm',
     gif: 'gif',
     'audio-extract': 'mp3',
-    mute: 'mp4'
+    mute: 'mp4',
+    
+    // Image formats
+    jpeg: 'jpg',
+    jpg: 'jpg',
+    png: 'png',
+    webp: 'webp',
+    avif: 'avif',
+    tiff: 'tif',
+    bmp: 'bmp',
+    
+    // Special cases
+    'image-optimized': ext === '.gif' ? 'gif' : 'webp',
+    'image-lossless': ext === '.png' ? 'png' : 'webp'
   };
-  return `${baseName}-${preset}-${Date.now()}.${extensions[preset] || 'mp4'}`;
+  
+  // If preset is a known format, use it, otherwise use the preset as extension
+  const outputExt = extensions[preset] || preset || 'bin';
+  
+  return `${baseName}-${preset}-${Date.now()}.${outputExt}`;
 }
 
 // API Endpoints
 app.get('/api/ffmpeg-status', (req, res) => {
   ffmpeg.getAvailableFormats((err, formats) => {
+    const imageFormats = ['jpeg', 'jpg', 'png', 'webp', 'avif', 'gif', 'tiff', 'bmp'];
+    const supportedFormats = {
+      video: ['mp4', 'webm', 'mov', 'mkv', 'avi', 'flv', 'mpeg', 'mpg'],
+      audio: ['mp3', 'aac', 'wav', 'ogg', 'flac', 'm4a'],
+      image: imageFormats,
+      document: ['pdf', 'doc', 'docx', 'txt', 'rtf']
+    };
+    
     res.json({
       available: !err,
       version: err ? null : ffmpeg.version(),
-      formats: err ? null : Object.keys(formats).slice(0, 20)
+      formats: {
+        video: supportedFormats.video,
+        audio: supportedFormats.audio,
+        image: supportedFormats.image,
+        document: supportedFormats.document
+      },
+      presets: {
+        video: ['mp4', 'webm', 'gif', 'mute'],
+        audio: ['audio-extract', 'mp3', 'aac'],
+        image: ['webp', 'jpeg', 'png', 'avif', 'tiff', 'bmp', 'image-optimized', 'image-lossless']
+      },
+      options: {
+        quality: { min: 1, max: 100, default: 85, description: 'Image quality (1-100)' },
+        width: { type: 'number', description: 'Resize width in pixels' },
+        height: { type: 'number', description: 'Resize height in pixels' },
+        maintainAspect: { type: 'boolean', default: true, description: 'Maintain aspect ratio when resizing' },
+        padColor: { type: 'string', default: 'black', description: 'Background color when maintaining aspect ratio' },
+        compressionLevel: { min: 0, max: 9, default: 6, description: 'Compression level (0-9)' },
+        lossless: { type: 'boolean', default: false, description: 'Use lossless compression (WebP)' },
+        progressive: { type: 'boolean', default: true, description: 'Use progressive encoding (JPEG)' },
+        subsample: { type: 'number', default: 6, min: 1, max: 6, description: 'Chroma subsampling (1-6)' },
+        speed: { type: 'number', default: 6, min: 0, max: 8, description: 'Speed/quality tradeoff (0=best quality, 8=fastest)' }
+      }
     });
   });
 });
