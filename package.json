@@ -6,12 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:check": "npm run build && if not exist dist/index.html exit 1",
+    "build:check": "npm run build && node -e \"require('fs').accessSync('dist/index.html')\"",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "vite": "^5.4.1",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",
@@ -79,7 +80,7 @@
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.11",
     "typescript": "^5.5.3",
-    "typescript-eslint": "^8.0.1",
-    "vite": "^5.4.1"
+    "typescript-eslint": "^8.0.1"
+
   }
 }
