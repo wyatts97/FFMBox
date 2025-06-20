@@ -1,8 +1,8 @@
 FROM node:20-slim
 
-# 1. Install pinned FFmpeg version with cleanup
+# Install latest FFmpeg from Debian repos
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg=7:5.1.2-* && \
+    apt-get install -y --no-install-recommends ffmpeg && \
     rm -rf /var/lib/apt/lists/* && \
     apt-get clean
 
