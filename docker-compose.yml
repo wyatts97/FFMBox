@@ -2,22 +2,41 @@ services:
   ffmbox:
     build:
       context: ./server
-    volumes:
-      - ./uploads:/app/uploads
-      - ./output:/app/output
+      args:
+        - NODE_ENV=production
     environment:
       - NODE_ENV=production
       - PORT=6900
+      - UPLOAD_DIR=/app/uploads
+      - OUTPUT_DIR=/app/output
+    volumes:
+      - ffmbox_uploads:/app/uploads
+      - ffmbox_output:/app/output
     restart: unless-stopped
-    
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6900/api/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
   nginx:
     build:
       context: .
-      target: nginx
+      target: production
+      args:
+        - VITE_API_BASE_URL=/api
     ports:
       - "6900:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
     depends_on:
-      - ffmbox
+      ffmbox:
+        condition: service_healthy
     restart: unless-stopped
+
+volumes:
+  ffmbox_uploads:
+  ffmbox_output:
