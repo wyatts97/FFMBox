@@ -1,35 +1,44 @@
-# Stage 1: FFmpeg builder using official Debian packages
-FROM debian:bookworm-slim as ffmpeg_builder
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg && \
-    mkdir -p /ffmpeg-dist/usr/bin /ffmpeg-dist/usr/lib && \
-    cp /usr/bin/ffmpeg /usr/bin/ffprobe /ffmpeg-dist/usr/bin/ && \
-    ldd /usr/bin/ffmpeg | awk '/=>/ {print $3}' | xargs -I{} cp --parents {} /ffmpeg-dist/ && \
-    rm -rf /var/lib/apt/lists/*
+# Stage 1: FFmpeg builder using Alpine Linux
+FROM alpine:3.19 as ffmpeg_builder
+RUN apk add --no-cache ffmpeg
 
 # Stage 2: Main application image
-FROM node:20-slim
+FROM node:20-alpine
 
-# Copy FFmpeg and its dependencies
-COPY --from=ffmpeg_builder /ffmpeg-dist/ /
+# Copy FFmpeg and its dependencies from builder
+COPY --from=ffmpeg_builder /usr/bin/ffmpeg /usr/bin/ffmpeg
+COPY --from=ffmpeg_builder /usr/bin/ffprobe /usr/bin/ffprobe
+COPY --from=ffmpeg_builder /usr/lib/ /usr/lib/
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    libgcc \
+    libstdc++ \
+    ca-certificates \
+    libcrypto3 \
+    libssl3 \
+    tzdata \
+    && rm -rf /var/cache/apk/*
 
 WORKDIR /app
+
+# Install Node.js dependencies
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
+# Create necessary directories with correct permissions
 RUN mkdir -p /app/uploads /app/output && \
-    chmod -R 755 /app/uploads /app/output
+    chown -R node:node /app
 
-COPY . .
+# Copy application files
+COPY --chown=node:node . .
 
-# User setup
-RUN echo "nodejs:x:999:999::/app:/bin/false" >> /etc/passwd && \
-    echo "nodejs:x:999:" >> /etc/group && \
-    chown -R 999:999 /app
-USER 999
+# Switch to non-root user
+USER node
 
+# Health check
 HEALTHCHECK --interval=30s --timeout=3s \
-    CMD curl -f http://localhost:6900/api/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:6900/api/health || exit 1
 
 EXPOSE 6900
 CMD ["node", "server.js"]
