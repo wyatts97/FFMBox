@@ -27,7 +27,6 @@ services:
   nginx:
     build:
       context: .
-      target: production
       args:
         - VITE_API_BASE_URL=/api
     ports:
