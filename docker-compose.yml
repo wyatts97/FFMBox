@@ -15,7 +15,7 @@ services:
       - CORS_ORIGIN=${CORS_ORIGIN:-*}
       - NODE_OPTIONS=${NODE_OPTIONS}
     working_dir: /app
-    user: "node"  # Running as non-root user for security
+    user: "1000:0"  # node user with root group for better compatibility
     volumes:
       - ffmbox_uploads:/app/uploads
       - ffmbox_output:/app/output
