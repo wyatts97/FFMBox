@@ -12,6 +12,7 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Settings, Zap } from 'lucide-react';
+import type { PresetOptions } from '../lib/ffmpeg';
 
 interface ConversionJob {
   id: string;
@@ -81,38 +82,36 @@ const Index = () => {
     }
   };
 
-  interface ConversionOptions {
-    // Common options
-    quality?: number;
-    width?: number;
-    height?: number;
-    fps?: number;
-    preset?: string;
-    
-    // Audio options
-    audioBitrate?: number;
-    audioCodec?: string;
-    
-    // Video options
-    videoBitrate?: number;
-    videoCodec?: string;
-    
-    // Image options
-    lossless?: boolean;
-    progressive?: boolean;
-    compressionLevel?: number;
-    interlaced?: boolean;
-    speed?: number;
-    
-    // Custom command
-    customCommand?: string;
-    
-    // Legacy options
-    startTime?: string;
-    duration?: string;
-  }
-
-  const handleConvert = async (file: FileInfo, preset: string, options: ConversionOptions = {}) => {
+  const handleConvert = async (file: FileInfo, preset: string, options: PresetOptions = {}) => {
+    // Frontend validation for special presets
+    if (preset === 'thumbnail-collage') {
+      if (!options.ext || !['jpg','png','webp'].includes(options.ext as string)) {
+        toast({ title: 'Invalid Option', description: 'Please select a valid image format for the collage.', variant: 'destructive' });
+        return;
+      }
+      if (!options.grid || typeof options.grid !== 'string' || !/^\d+x\d+$/.test(options.grid)) {
+        toast({ title: 'Invalid Option', description: 'Grid size must be like 3x3.', variant: 'destructive' });
+        return;
+      }
+      if (!options.scale || !/^\d+:\d+$/.test(options.scale)) {
+        toast({ title: 'Invalid Option', description: 'Scale must be like 320:180.', variant: 'destructive' });
+        return;
+      }
+      if (!options.interval || isNaN(Number(options.interval)) || Number(options.interval) < 1) {
+        toast({ title: 'Invalid Option', description: 'Frame interval must be a positive number.', variant: 'destructive' });
+        return;
+      }
+    }
+    if (preset === 'watermark' && options.type === 'text') {
+      if (!options.text || typeof options.text !== 'string' || !options.text.trim()) {
+        toast({ title: 'Invalid Option', description: 'Watermark text is required.', variant: 'destructive' });
+        return;
+      }
+      if (!options.fontfile || typeof options.fontfile !== 'string') {
+        toast({ title: 'Invalid Option', description: 'Font file is required for text watermark.', variant: 'destructive' });
+        return;
+      }
+    }
     try {
       const result = await apiService.convertFile(file.id, file.filename, preset, options);
       
@@ -126,14 +125,36 @@ const Index = () => {
 
       setConversions(prev => [...prev, newJob]);
 
+      // Map preset ID to human-readable name
+      let presetName = preset;
+      try {
+        // Dynamically import PRESETS from ffmpeg.tsx
+        // (If you move PRESETS to a shared util, import from there)
+        const { PRESETS } = await import('@/lib/ffmpeg');
+        const found = PRESETS.find((p: { id: string; name?: string }) => p.id === preset);
+        if (found && found.name) presetName = found.name;
+      } catch (e) {
+        // ignore
+      }
       toast({
         title: "Conversion started",
-        description: `Converting ${file.originalName} to ${preset}`,
+        description: `Converting ${file.originalName} to ${presetName}`,
       });
-    } catch (error) {
+    } catch (error: unknown) {
+      let message = "Failed to start conversion. Please try again.";
+      const err = error as { message?: string };
+      if (err?.message) {
+        try {
+          const errObj = JSON.parse(err.message);
+          if (errObj && errObj.error) message = errObj.error;
+          if (errObj && errObj.message) message = errObj.message;
+        } catch (e) {
+          // ignore
+        }
+      }
       toast({
         title: "Conversion failed",
-        description: "Failed to start conversion. Please try again.",
+        description: message,
         variant: "destructive",
       });
     }
@@ -144,7 +165,7 @@ const Index = () => {
     setConversions(prev => prev.filter(c => c.file.id !== fileId));
   };
 
-  const handlePresetConvert = (preset: string, options: ConversionOptions = {}) => {
+  const handlePresetConvert = (preset: string, options: PresetOptions = {}) => {
     files.forEach(file => {
       handleConvert(file, preset, options);
     });

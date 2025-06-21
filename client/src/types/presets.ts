@@ -32,7 +32,7 @@ export interface PresetOptions {
   [key: string]: unknown;
 }
 
-export type PresetCategory = 'video' | 'audio' | 'image' | 'all' | 'custom' | 'conversion' | 'compression' | 'extraction';
+export type PresetCategory = 'video' | 'audio' | 'image' | 'all' | 'custom' | 'conversion' | 'compression' | 'extraction' | 'utility';
 
 export type GetOptionsFunction = (
   fileType: string,

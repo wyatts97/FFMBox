@@ -1,21 +1,24 @@
 import { useCallback, useMemo, useState, useEffect, ReactNode } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Slider } from '@/components/ui/slider';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { FileCode, Play, Trash2, Settings, Film, Music2, Image as ImageIcon } from 'lucide-react';
 
-import { PRESETS, type BasePreset as FFMpegBasePreset, type CustomPreset as FFMpegCustomPreset } from '@/lib/ffmpeg';
-import usePresetManagement from '@/hooks/usePresetManagement';
+// Import UI components using relative paths
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Input } from './ui/input';
+import { Button } from './ui/button';
+import { Label } from './ui/label';
+import { Switch } from './ui/switch';
+import { Textarea } from './ui/textarea';
+import { ScrollArea } from './ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
+import { Slider } from './ui/slider';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Badge } from './ui/badge';
+import { Separator } from './ui/separator';
+
+// Import FFmpeg presets and types
+import { PRESETS, type BasePreset as FFMpegBasePreset, type CustomPreset as FFMpegCustomPreset } from '../lib/ffmpeg';
+import usePresetManagement from '../hooks/usePresetManagement';
 import { 
   type AnyPreset, 
   type BasePreset, 
@@ -25,7 +28,7 @@ import {
   type PresetState,
   isBasePreset,
   isCustomPreset
-} from '@/types/presets';
+} from '../types/presets';
 
 // Type guard to check if a preset is from ffmpeg.tsx
 function isFFMpegPreset(preset: unknown): preset is FFMpegBasePreset | FFMpegCustomPreset {

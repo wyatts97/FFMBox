@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -135,4 +134,16 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(0 84% 50%);
+}
+
+/* Force black text for select/option in dark mode */
+.dark select, .dark option {
+  color: #000 !important;
+  background-color: #fff !important;
+}
+
+/* Make settings flyout content scrollable */
+.settings-flyout-scroll {
+  max-height: 80vh;
+  overflow-y: auto;
 }

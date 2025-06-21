@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import PresetService from '@/services/presetService';
+import PresetService from '../services/presetService';
 import { 
-  AnyPreset, 
-  CustomPreset, 
-  PresetOptions,
-  PresetState, 
+  type AnyPreset, 
+  type CustomPreset, 
+  type PresetOptions,
+  type PresetState, 
   isValidCustomPreset 
-} from '@/types/presets';
+} from '../types/presets';
 
 const usePresetManagement = (initialPresets: AnyPreset[] = []) => {
   const [state, setState] = useState<PresetState>({

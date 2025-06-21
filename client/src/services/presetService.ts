@@ -1,4 +1,4 @@
-import type { CustomPreset } from '@/types/presets';
+import type { CustomPreset } from '../types/presets';
 
 export type { CustomPreset };
 
