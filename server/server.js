@@ -706,14 +706,22 @@ app.get('/api/health', (req, res) => {
 
     const isHealthy = uploadsCheck.writable && outputCheck.writable;
 
+    // Get FFmpeg version info
+    let ffmpegInfo = { available: false };
+    try {
+      ffmpegInfo = {
+        available: true,
+        version: ffmpeg.version()
+      };
+    } catch (ffmpegErr) {
+      console.error('FFmpeg version check failed:', ffmpegErr);
+      ffmpegInfo.error = ffmpegErr.message;
+    }
+
     res.status(isHealthy ? 200 : 503).json({ 
       status: isHealthy ? 'healthy' : 'unhealthy',
       timestamp: new Date().toISOString(),
-      ffmpeg: {
-        available: !!ffmpeg,
-        version: err ? null : ffmpeg.version(),
-        formats: err ? null : Object.keys(formats).slice(0, 20)
-      },
+      ffmpeg: ffmpegInfo,
       directories: {
         uploads: {
           path: UPLOAD_DIR,
