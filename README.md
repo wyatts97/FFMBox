@@ -1,6 +1,12 @@
-# 🎬 FFMBox: The Ultimate FFmpeg Media Converter & Compressor
+<div align="center">
+  <img src="512x512.webp" alt="FFMBox Icon" width="128" height="128" />
+  
+  # <span style="display:inline-block;vertical-align:middle;">FFMBox</span>
+  
+  <h3>The Ultimate FFmpeg Media Converter & Compressor</h3>
+</div>
 
-![FFMBox Banner](https://user-images.githubusercontent.com/placeholder/banner.png)
+---
 
 ## 🚀 Overview
 
@@ -73,7 +79,7 @@ docker-compose up --build
 ```
 
 ### 4. Open in Browser
-Visit: [http://localhost:3000](http://localhost:3000)
+Visit: [http://localhost:6900](http://localhost:6900)
 
 ---
 
@@ -118,8 +124,10 @@ Pull requests and suggestions are welcome! Please open an issue or PR.
 ---
 
 ## 📄 License
-MIT License
+**GNU General Public License v3.0**
+
+See the [LICENSE](LICENSE) file for details.
 
 ---
 
-> **FFMBox** — The all-in-one, open-source media conversion toolbox powered by FFmpeg.
+> <div align="center"><b>FFMBox</b> — The all-in-one, open-source media conversion toolbox powered by FFmpeg.</div>
