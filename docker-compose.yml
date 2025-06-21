@@ -24,7 +24,7 @@ services:
       - "${PORT}:${PORT}"
       - "9229:9229"  # For Node.js debugger
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:${PORT}/api/health"]
+      test: ["CMD", "/healthcheck.sh"]
       interval: 30s
       timeout: 15s
       retries: 5
