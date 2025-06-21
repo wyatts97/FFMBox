@@ -146,7 +146,7 @@ export const PRESETS: BasePreset[] = [
   {
     id: 'mp4',
     name: 'MP4 (H.264)',
-    description: 'Standard MP4 video with H.264 codec',
+    description: 'Standard MP4 with H.264 video and AAC audio',
     icon: '🎥',
     category: 'video',
     options: {
@@ -156,10 +156,174 @@ export const PRESETS: BasePreset[] = [
       preset: 'medium',
       pixelFormat: 'yuv420p',
     },
-    getOptions: (fileType, options, onChange) => 
-      renderVideoOptions(options, onChange)
+    getOptions: (fileType, options, onChange) => renderVideoOptions(options, onChange)
+  },
+  {
+    id: 'mp4-hq',
+    name: 'MP4 High Quality',
+    description: 'High quality MP4 with better compression (larger file size)',
+    icon: '🎬',
+    category: 'video',
+    options: {
+      videoCodec: 'libx264',
+      audioCodec: 'aac',
+      crf: 18,
+      preset: 'slower',
+      pixelFormat: 'yuv420p',
+    },
+    getOptions: (fileType, options, onChange) => renderVideoOptions(options, onChange)
+  },
+  {
+    id: 'mp4-fast',
+    name: 'MP4 Fast',
+    description: 'MP4 with H.264, lower quality but much faster encoding',
+    icon: '⚡',
+    category: 'video',
+    options: {
+      videoCodec: 'libx264',
+      audioCodec: 'aac',
+      crf: 28,
+      preset: 'ultrafast',
+      pixelFormat: 'yuv420p',
+    },
+    getOptions: (fileType, options, onChange) => renderVideoOptions(options, onChange)
+  },
+  {
+    id: 'mp4-mobile',
+    name: 'MP4 Mobile',
+    description: 'MP4 optimized for mobile (lower resolution, lower bitrate)',
+    icon: '📱',
+    category: 'video',
+    options: {
+      videoCodec: 'libx264',
+      audioCodec: 'aac',
+      crf: 28,
+      preset: 'veryfast',
+      pixelFormat: 'yuv420p',
+      width: 640,
+      height: 360,
+    },
+    getOptions: (fileType, options, onChange) => renderVideoOptions(options, onChange)
+  },
+  {
+    id: 'hevc',
+    name: 'MP4 (H.265/HEVC)',
+    description: 'MP4 with H.265/HEVC video',
+    icon: '🦾',
+    category: 'video',
+    options: {
+      videoCodec: 'libx265',
+      audioCodec: 'aac',
+      crf: 28,
+      preset: 'medium',
+      pixelFormat: 'yuv420p',
+    },
+    getOptions: (fileType, options, onChange) => renderVideoOptions(options, onChange)
+  },
+  {
+    id: 'prores',
+    name: 'MOV (ProRes)',
+    description: 'MOV with Apple ProRes codec (for professional editing workflows)',
+    icon: '🎞️',
+    category: 'video',
+    options: {
+      videoCodec: 'prores_ks',
+      audioCodec: 'pcm_s16le',
+    },
+  },
+  {
+    id: 'webm-vp8',
+    name: 'WebM (VP8)',
+    description: 'WebM with VP8 video and Vorbis audio',
+    icon: '🌐',
+    category: 'video',
+    options: {
+      videoCodec: 'libvpx',
+      audioCodec: 'libvorbis',
+      crf: 10,
+    },
+  },
+  {
+    id: 'mov',
+    name: 'MOV (H.264)',
+    description: 'MOV container with H.264 (for Apple compatibility)',
+    icon: '🍏',
+    category: 'video',
+    options: {
+      videoCodec: 'libx264',
+      audioCodec: 'aac',
+      crf: 23,
+      preset: 'medium',
+      pixelFormat: 'yuv420p',
+    },
+    getOptions: (fileType, options, onChange) => renderVideoOptions(options, onChange)
+  },
+  {
+    id: 'mkv',
+    name: 'MKV (H.264)',
+    description: 'MKV container with H.264',
+    icon: '📦',
+    category: 'video',
+    options: {
+      videoCodec: 'libx264',
+      audioCodec: 'aac',
+      crf: 23,
+      preset: 'medium',
+      pixelFormat: 'yuv420p',
+    },
+    getOptions: (fileType, options, onChange) => renderVideoOptions(options, onChange)
+  },
+  {
+    id: '4k-hq',
+    name: '4K High Quality',
+    description: '4K high quality MP4',
+    icon: '🖥️',
+    category: 'video',
+    options: {
+      videoCodec: 'libx264',
+      audioCodec: 'aac',
+      crf: 18,
+      preset: 'slow',
+      pixelFormat: 'yuv420p',
+      width: 3840,
+      height: 2160,
+    },
+    getOptions: (fileType, options, onChange) => renderVideoOptions(options, onChange)
+  },
+  {
+    id: 'gif',
+    name: 'GIF',
+    description: 'Animated GIF with optimized palette',
+    icon: '🖼️',
+    category: 'video',
+    options: {},
+  },
+  {
+    id: 'mute',
+    name: 'Mute Video',
+    description: 'Video with audio removed',
+    icon: '🔇',
+    category: 'video',
+    options: {
+      videoCodec: 'libx264',
+      crf: 23,
+      preset: 'medium',
+      pixelFormat: 'yuv420p',
+    },
+    getOptions: (fileType, options, onChange) => renderVideoOptions(options, onChange)
   },
   // Audio presets
+  {
+    id: 'audio-extract',
+    name: 'Extract Audio (MP3)',
+    description: 'Extract audio as MP3',
+    icon: '🎵',
+    category: 'audio',
+    options: {
+      audioCodec: 'libmp3lame',
+      audioQuality: 3,
+    },
+  },
   {
     id: 'mp3',
     name: 'MP3',
@@ -171,17 +335,521 @@ export const PRESETS: BasePreset[] = [
       audioBitrate: '192k',
     },
   },
+  {
+    id: 'aac',
+    name: 'AAC',
+    description: 'AAC audio (for MP4/M4A compatibility)',
+    icon: '🔊',
+    category: 'audio',
+    options: {
+      audioCodec: 'aac',
+      audioBitrate: '128k',
+    },
+  },
+  {
+    id: 'flac',
+    name: 'FLAC',
+    description: 'FLAC lossless audio',
+    icon: '💽',
+    category: 'audio',
+    options: {
+      audioCodec: 'flac',
+    },
+  },
+  {
+    id: 'wav',
+    name: 'WAV',
+    description: 'Uncompressed WAV audio',
+    icon: '🎚️',
+    category: 'audio',
+    options: {
+      audioCodec: 'pcm_s16le',
+    },
+  },
+  {
+    id: 'ogg',
+    name: 'OGG Vorbis',
+    description: 'OGG Vorbis audio',
+    icon: '🦉',
+    category: 'audio',
+    options: {
+      audioCodec: 'libvorbis',
+    },
+  },
+  {
+    id: 'opus',
+    name: 'Opus',
+    description: 'Opus audio (for web and streaming)',
+    icon: '🎤',
+    category: 'audio',
+    options: {
+      audioCodec: 'libopus',
+    },
+  },
   // Image presets
   {
-    id: 'jpeg',
-    name: 'JPEG',
-    description: 'Standard JPEG image',
+    id: 'webp',
+    name: 'WebP',
+    description: 'WebP image format',
     icon: '🖼️',
     category: 'image',
     options: {
-      quality: 90,
+      quality: 85,
+      compressionLevel: 6,
+    },
+  },
+  {
+    id: 'jpeg',
+    name: 'JPEG',
+    description: 'JPEG image format',
+    icon: '🖼️',
+    category: 'image',
+    options: {
+      quality: 85,
       progressive: true,
     },
+  },
+  {
+    id: 'png',
+    name: 'PNG',
+    description: 'PNG image format',
+    icon: '🖼️',
+    category: 'image',
+    options: {
+      compressionLevel: 9,
+    },
+  },
+  {
+    id: 'avif',
+    name: 'AVIF',
+    description: 'AVIF image format',
+    icon: '🖼️',
+    category: 'image',
+    options: {
+      quality: 23,
+      compressionLevel: 6,
+    },
+  },
+  {
+    id: 'tiff',
+    name: 'TIFF',
+    description: 'TIFF image format (lossless)',
+    icon: '🖨️',
+    category: 'image',
+    options: {},
+  },
+  {
+    id: 'bmp',
+    name: 'BMP',
+    description: 'BMP image format (legacy compatibility)',
+    icon: '🖌️',
+    category: 'image',
+    options: {},
+  },
+  {
+    id: 'gif-optimized',
+    name: 'GIF Optimized',
+    description: 'GIF with lower frame rate and palette optimization for smaller file size',
+    icon: '🖼️',
+    category: 'image',
+    options: {},
+  },
+  {
+    id: 'png-lossless',
+    name: 'PNG Lossless',
+    description: 'PNG with maximum compression, no quality loss',
+    icon: '🖼️',
+    category: 'image',
+    options: {},
+  },
+  {
+    id: 'jpeg-low',
+    name: 'JPEG Low Quality',
+    description: 'JPEG with lower quality (for web thumbnails)',
+    icon: '🖼️',
+    category: 'image',
+    options: {},
+  },
+  // Utility presets
+  {
+    id: 'extract-frames',
+    name: 'Extract Frames',
+    description: 'Extract frames from video as images (PNG or JPEG sequence)',
+    icon: '🖼️',
+    category: 'utility',
+    options: {},
+    getOptions: (fileType, options, onChange) => (
+      <div>
+        <label className="block text-sm font-medium mb-1">Frame Count</label>
+        <input
+          type="number"
+          min={1}
+          max={100}
+          value={options.count as number || 9}
+          onChange={createChangeHandler('count', onChange, v => Number(v))}
+          className="w-full p-2 border rounded mb-2"
+        />
+        <label className="block text-sm font-medium mb-1">Image Format</label>
+        <select
+          value={options.ext as string || 'png'}
+          onChange={createChangeHandler('ext', onChange)}
+          className="w-full p-2 border rounded"
+        >
+          <option value="png">PNG</option>
+          <option value="jpg">JPG</option>
+          <option value="webp">WebP</option>
+        </select>
+      </div>
+    )
+  },
+  {
+    id: 'thumbnail',
+    name: 'Thumbnail',
+    description: 'Generate a single thumbnail image from a video (at a specific timestamp)',
+    icon: '🖼️',
+    category: 'utility',
+    options: {},
+    getOptions: (fileType, options, onChange) => (
+      <div>
+        <label className="block text-sm font-medium mb-1">Timestamp (e.g. 00:00:05)</label>
+        <input
+          type="text"
+          value={options.timestamp as string || '00:00:01'}
+          onChange={createChangeHandler('timestamp', onChange)}
+          className="w-full p-2 border rounded mb-2"
+        />
+        <label className="block text-sm font-medium mb-1">Image Format</label>
+        <select
+          value={options.ext as string || 'png'}
+          onChange={createChangeHandler('ext', onChange)}
+          className="w-full p-2 border rounded"
+        >
+          <option value="png">PNG</option>
+          <option value="jpg">JPG</option>
+          <option value="webp">WebP</option>
+        </select>
+      </div>
+    )
+  },
+  {
+    id: 'trim',
+    name: 'Trim Video',
+    description: 'Trim/cut video to a specific time range',
+    icon: '✂️',
+    category: 'utility',
+    options: {},
+    getOptions: (fileType, options, onChange) => (
+      <div>
+        <label className="block text-sm font-medium mb-1">Start Time (e.g. 00:00:05)</label>
+        <input
+          type="text"
+          value={options.start as string || '00:00:00'}
+          onChange={createChangeHandler('start', onChange)}
+          className="w-full p-2 border rounded mb-2"
+        />
+        <label className="block text-sm font-medium mb-1">Duration (e.g. 00:00:10)</label>
+        <input
+          type="text"
+          value={options.duration as string || ''}
+          onChange={createChangeHandler('duration', onChange)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+    )
+  },
+  {
+    id: 'resize',
+    name: 'Resize Video',
+    description: 'Resize video to a specific resolution',
+    icon: '📏',
+    category: 'utility',
+    options: {},
+    getOptions: (fileType, options, onChange) => (
+      <div>
+        <label className="block text-sm font-medium mb-1">Width</label>
+        <input
+          type="number"
+          min={1}
+          value={options.width as number || 1280}
+          onChange={createChangeHandler('width', onChange, v => Number(v))}
+          className="w-full p-2 border rounded mb-2"
+        />
+        <label className="block text-sm font-medium mb-1">Height</label>
+        <input
+          type="number"
+          min={1}
+          value={options.height as number || 720}
+          onChange={createChangeHandler('height', onChange, v => Number(v))}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+    )
+  },
+  {
+    id: 'watermark',
+    name: 'Watermark',
+    description: 'Add a watermark image, text, or scrolling text overlay to video',
+    icon: '💧',
+    category: 'utility',
+    options: {},
+    getOptions: (fileType, options, onChange) => {
+      // Font options (should match files in public/fonts)
+      const fontOptions = [
+        { label: 'Arial', value: 'Arial.ttf' },
+        { label: 'DejaVu Sans', value: 'DejaVuSans.ttf' },
+        { label: 'Liberation Sans', value: 'LiberationSans-Regular.ttf' },
+        { label: 'Open Sans', value: 'OpenSans-Regular.ttf' },
+        { label: 'Roboto', value: 'Roboto-Regular.ttf' },
+      ];
+      return (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Watermark Type</label>
+            <select
+              value={options.type as string || 'image'}
+              onChange={createChangeHandler('type', onChange)}
+              className="w-full p-2 border rounded"
+            >
+              <option value="image">Image</option>
+              <option value="text">Text</option>
+              <option value="scrolling-text">Scrolling Text</option>
+            </select>
+          </div>
+          {options.type === 'image' && (
+            <>
+              <label className="block text-sm font-medium mb-1">Image Path (relative to /public/fonts or /uploads)</label>
+              <input
+                type="text"
+                value={options.watermarkPath as string || ''}
+                onChange={createChangeHandler('watermarkPath', onChange)}
+                className="w-full p-2 border rounded mb-2"
+              />
+              <label className="block text-sm font-medium mb-1">Scale (%)</label>
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={options.scale as number || 100}
+                onChange={createChangeHandler('scale', onChange, v => Number(v))}
+                className="w-full p-2 border rounded mb-2"
+              />
+              <label className="block text-sm font-medium mb-1">Opacity (0-1)</label>
+              <input
+                type="number"
+                min={0}
+                max={1}
+                step={0.01}
+                value={options.opacity as number || 1}
+                onChange={createChangeHandler('opacity', onChange, v => Number(v))}
+                className="w-full p-2 border rounded mb-2"
+              />
+            </>
+          )}
+          {(options.type === 'image' || options.type === 'text' || options.type === 'scrolling-text') && (
+            <>
+              <label className="block text-sm font-medium mb-1">Position</label>
+              <select
+                value={options.position as string || 'bottom-right'}
+                onChange={createChangeHandler('position', onChange)}
+                className="w-full p-2 border rounded mb-2"
+              >
+                <option value="top-left">Top Left</option>
+                <option value="top-right">Top Right</option>
+                <option value="bottom-left">Bottom Left</option>
+                <option value="bottom-right">Bottom Right</option>
+                <option value="center">Center</option>
+                <option value="custom">Custom</option>
+              </select>
+              {options.position === 'custom' && (
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    placeholder="X"
+                    value={options.x as number || 0}
+                    onChange={createChangeHandler('x', onChange, v => Number(v))}
+                    className="w-full p-2 border rounded"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Y"
+                    value={options.y as number || 0}
+                    onChange={createChangeHandler('y', onChange, v => Number(v))}
+                    className="w-full p-2 border rounded"
+                  />
+                </div>
+              )}
+              <label className="block text-sm font-medium mb-1">Margin (px)</label>
+              <input
+                type="number"
+                min={0}
+                value={options.margin as number || 10}
+                onChange={createChangeHandler('margin', onChange, v => Number(v))}
+                className="w-full p-2 border rounded mb-2"
+              />
+            </>
+          )}
+          {(options.type === 'text' || options.type === 'scrolling-text') && (
+            <>
+              <label className="block text-sm font-medium mb-1">Text</label>
+              <input
+                type="text"
+                value={options.text as string || ''}
+                onChange={createChangeHandler('text', onChange)}
+                className="w-full p-2 border rounded mb-2"
+              />
+              <label className="block text-sm font-medium mb-1">Font</label>
+              <select
+                value={options.fontfile as string || 'Arial.ttf'}
+                onChange={createChangeHandler('fontfile', onChange)}
+                className="w-full p-2 border rounded mb-2"
+              >
+                {fontOptions.map(f => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </select>
+              <label className="block text-sm font-medium mb-1">Font Size</label>
+              <input
+                type="number"
+                min={8}
+                max={200}
+                value={options.fontsize as number || 24}
+                onChange={createChangeHandler('fontsize', onChange, v => Number(v))}
+                className="w-full p-2 border rounded mb-2"
+              />
+              <label className="block text-sm font-medium mb-1">Font Color (e.g. white@0.7)</label>
+              <input
+                type="text"
+                value={options.fontcolor as string || 'white@0.7'}
+                onChange={createChangeHandler('fontcolor', onChange)}
+                className="w-full p-2 border rounded mb-2"
+              />
+              <label className="block text-sm font-medium mb-1">Shadow X</label>
+              <input
+                type="number"
+                value={options.shadowx as number || 2}
+                onChange={createChangeHandler('shadowx', onChange, v => Number(v))}
+                className="w-full p-2 border rounded mb-2"
+              />
+              <label className="block text-sm font-medium mb-1">Shadow Y</label>
+              <input
+                type="number"
+                value={options.shadowy as number || 2}
+                onChange={createChangeHandler('shadowy', onChange, v => Number(v))}
+                className="w-full p-2 border rounded mb-2"
+              />
+              <label className="block text-sm font-medium mb-1">Outline Color</label>
+              <input
+                type="text"
+                value={options.outlinecolor as string || 'black'}
+                onChange={createChangeHandler('outlinecolor', onChange)}
+                className="w-full p-2 border rounded mb-2"
+              />
+              <label className="block text-sm font-medium mb-1">Outline Width</label>
+              <input
+                type="number"
+                value={options.outlinewidth as number || 2}
+                onChange={createChangeHandler('outlinewidth', onChange, v => Number(v))}
+                className="w-full p-2 border rounded mb-2"
+              />
+              <label className="block text-sm font-medium mb-1">Opacity (0-1)</label>
+              <input
+                type="number"
+                min={0}
+                max={1}
+                step={0.01}
+                value={options.opacity as number || 1}
+                onChange={createChangeHandler('opacity', onChange, v => Number(v))}
+                className="w-full p-2 border rounded mb-2"
+              />
+              <label className="block text-sm font-medium mb-1">Rotation (degrees)</label>
+              <input
+                type="number"
+                value={options.rotation as number || 0}
+                onChange={createChangeHandler('rotation', onChange, v => Number(v))}
+                className="w-full p-2 border rounded mb-2"
+              />
+              <label className="block text-sm font-medium mb-1">Start Time (seconds)</label>
+              <input
+                type="number"
+                min={0}
+                value={options.start as number || 0}
+                onChange={createChangeHandler('start', onChange, v => Number(v))}
+                className="w-full p-2 border rounded mb-2"
+              />
+              <label className="block text-sm font-medium mb-1">End Time (seconds, 0 = full video)</label>
+              <input
+                type="number"
+                min={0}
+                value={options.end as number || 0}
+                onChange={createChangeHandler('end', onChange, v => Number(v))}
+                className="w-full p-2 border rounded mb-2"
+              />
+              <label className="block text-sm font-medium mb-1">Fade In (seconds)</label>
+              <input
+                type="number"
+                min={0}
+                value={options.fadein as number || 0}
+                onChange={createChangeHandler('fadein', onChange, v => Number(v))}
+                className="w-full p-2 border rounded mb-2"
+              />
+              <label className="block text-sm font-medium mb-1">Fade Out (seconds)</label>
+              <input
+                type="number"
+                min={0}
+                value={options.fadeout as number || 0}
+                onChange={createChangeHandler('fadeout', onChange, v => Number(v))}
+                className="w-full p-2 border rounded mb-2"
+              />
+            </>
+          )}
+          {options.type === 'scrolling-text' && (
+            <>
+              <label className="block text-sm font-medium mb-1">Scroll Speed (pixels/sec)</label>
+              <input
+                type="number"
+                min={10}
+                max={500}
+                value={options.scrollspeed as number || 50}
+                onChange={createChangeHandler('scrollspeed', onChange, v => Number(v))}
+                className="w-full p-2 border rounded mb-2"
+              />
+              <label className="block text-sm font-medium mb-1">Vertical Position</label>
+              <select
+                value={options.scrollpos as string || 'bottom'}
+                onChange={createChangeHandler('scrollpos', onChange)}
+                className="w-full p-2 border rounded mb-2"
+              >
+                <option value="top">Top</option>
+                <option value="middle">Middle</option>
+                <option value="bottom">Bottom</option>
+              </select>
+            </>
+          )}
+        </div>
+      );
+    }
+  },
+  {
+    id: 'thumbnail-collage',
+    name: 'Thumbnail Collage',
+    description: 'Grab 9 frames from a video and display them in a singular square image (user chooses output type)',
+    icon: '🖼️',
+    category: 'utility',
+    options: {},
+    getOptions: (fileType, options, onChange) => (
+      <div>
+        <label className="block text-sm font-medium mb-1">Image Format</label>
+        <select
+          value={options.ext as string || 'png'}
+          onChange={createChangeHandler('ext', onChange)}
+          className="w-full p-2 border rounded"
+        >
+          <option value="png">PNG</option>
+          <option value="jpg">JPG</option>
+          <option value="webp">WebP</option>
+        </select>
+      </div>
+    )
   },
 ];
 

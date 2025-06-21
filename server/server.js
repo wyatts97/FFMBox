@@ -346,12 +346,68 @@ const PRESETS = {
     description: 'High quality MP4 with better compression (larger file size)',
     category: 'video'
   },
-  'webm': {
+  'mp4-fast': {
+    format: 'mp4',
+    videoCodec: 'libx264',
+    audioCodec: 'aac',
+    outputOptions: ['-movflags +faststart', '-crf 28', '-preset ultrafast', '-profile:v baseline', '-pix_fmt yuv420p'],
+    description: 'MP4 with H.264, lower quality but much faster encoding',
+    category: 'video'
+  },
+  'mp4-mobile': {
+    format: 'mp4',
+    videoCodec: 'libx264',
+    audioCodec: 'aac',
+    outputOptions: ['-movflags +faststart', '-crf 28', '-preset veryfast', '-profile:v baseline', '-pix_fmt yuv420p', '-vf scale=640:360'],
+    description: 'MP4 optimized for mobile (lower resolution, lower bitrate)',
+    category: 'video'
+  },
+  'hevc': {
+    format: 'mp4',
+    videoCodec: 'libx265',
+    audioCodec: 'aac',
+    outputOptions: ['-crf 28', '-preset medium', '-pix_fmt yuv420p'],
+    description: 'MP4 with H.265/HEVC video',
+    category: 'video'
+  },
+  'prores': {
+    format: 'mov',
+    videoCodec: 'prores_ks',
+    audioCodec: 'pcm_s16le',
+    outputOptions: ['-profile:v 3'],
+    description: 'MOV with Apple ProRes codec (for professional editing workflows)',
+    category: 'video'
+  },
+  'webm-vp8': {
     format: 'webm',
-    videoCodec: 'libvpx-vp9',
-    audioCodec: 'libopus',
-    outputOptions: ['-b:v 1M', '-crf 30', '-deadline good', '-cpu-used 2'],
-    description: 'WebM with VP9 video and Opus audio',
+    videoCodec: 'libvpx',
+    audioCodec: 'libvorbis',
+    outputOptions: ['-b:v 1M', '-crf 10'],
+    description: 'WebM with VP8 video and Vorbis audio',
+    category: 'video'
+  },
+  'mov': {
+    format: 'mov',
+    videoCodec: 'libx264',
+    audioCodec: 'aac',
+    outputOptions: ['-crf 23', '-preset medium', '-pix_fmt yuv420p'],
+    description: 'MOV container with H.264 (for Apple compatibility)',
+    category: 'video'
+  },
+  'mkv': {
+    format: 'mkv',
+    videoCodec: 'libx264',
+    audioCodec: 'aac',
+    outputOptions: ['-crf 23', '-preset medium', '-pix_fmt yuv420p'],
+    description: 'MKV container with H.264',
+    category: 'video'
+  },
+  '4k-hq': {
+    format: 'mp4',
+    videoCodec: 'libx264',
+    audioCodec: 'aac',
+    outputOptions: ['-crf 18', '-preset slow', '-pix_fmt yuv420p', '-vf scale=3840:2160'],
+    description: '4K high quality MP4',
     category: 'video'
   },
   'gif': {
@@ -364,14 +420,6 @@ const PRESETS = {
     description: 'Animated GIF with optimized palette',
     category: 'video'
   },
-  'audio-extract': {
-    noVideo: true,
-    format: 'mp3',
-    audioCodec: 'libmp3lame',
-    audioQuality: 3,
-    description: 'Extract audio as MP3',
-    category: 'audio'
-  },
   'mute': {
     noAudio: true,
     format: 'mp4',
@@ -380,7 +428,59 @@ const PRESETS = {
     description: 'Video with audio removed',
     category: 'video'
   },
-  
+  // Audio presets
+  'audio-extract': {
+    noVideo: true,
+    format: 'mp3',
+    audioCodec: 'libmp3lame',
+    audioQuality: 3,
+    description: 'Extract audio as MP3',
+    category: 'audio'
+  },
+  'mp3': {
+    noVideo: true,
+    format: 'mp3',
+    audioCodec: 'libmp3lame',
+    outputOptions: ['-b:a 192k'],
+    description: 'Standard MP3 audio',
+    category: 'audio'
+  },
+  'aac': {
+    noVideo: true,
+    format: 'aac',
+    audioCodec: 'aac',
+    outputOptions: ['-b:a 128k'],
+    description: 'AAC audio (for MP4/M4A compatibility)',
+    category: 'audio'
+  },
+  'flac': {
+    noVideo: true,
+    format: 'flac',
+    audioCodec: 'flac',
+    description: 'FLAC lossless audio',
+    category: 'audio'
+  },
+  'wav': {
+    noVideo: true,
+    format: 'wav',
+    audioCodec: 'pcm_s16le',
+    description: 'Uncompressed WAV audio',
+    category: 'audio'
+  },
+  'ogg': {
+    noVideo: true,
+    format: 'ogg',
+    audioCodec: 'libvorbis',
+    description: 'OGG Vorbis audio',
+    category: 'audio'
+  },
+  'opus': {
+    noVideo: true,
+    format: 'opus',
+    audioCodec: 'libopus',
+    description: 'Opus audio (for web and streaming)',
+    category: 'audio'
+  },
   // Image presets
   'webp': {
     format: 'webp',
@@ -405,6 +505,84 @@ const PRESETS = {
     outputOptions: ['-qp 23', '-speed 6'],
     description: 'AVIF image format',
     category: 'image'
+  },
+  'tiff': {
+    format: 'tiff',
+    outputOptions: ['-compression lzw'],
+    description: 'TIFF image format (lossless)',
+    category: 'image'
+  },
+  'bmp': {
+    format: 'bmp',
+    description: 'BMP image format (legacy compatibility)',
+    category: 'image'
+  },
+  'gif-optimized': {
+    format: 'gif',
+    videoFilters: [
+      'fps=10',
+      'scale=320:-1:flags=lanczos',
+      'split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse'
+    ],
+    description: 'GIF with lower frame rate and palette optimization for smaller file size',
+    category: 'image'
+  },
+  'png-lossless': {
+    format: 'png',
+    outputOptions: ['-compression_level 9'],
+    description: 'PNG with maximum compression, no quality loss',
+    category: 'image'
+  },
+  'jpeg-low': {
+    format: 'mjpeg',
+    outputOptions: ['-q:v 60', '-pix_fmt yuvj420p'],
+    description: 'JPEG with lower quality (for web thumbnails)',
+    category: 'image'
+  },
+  // Utility presets
+  'extract-frames': {
+    format: 'image',
+    description: 'Extract frames from video as images (PNG or JPEG sequence)',
+    category: 'utility',
+    outputOptions: [],
+    // expects options: { count: number, ext: 'png'|'jpg'|'webp' }
+  },
+  'thumbnail': {
+    format: 'image',
+    description: 'Generate a single thumbnail image from a video (at a specific timestamp)',
+    category: 'utility',
+    outputOptions: [],
+    // expects options: { timestamp: string, ext: 'png'|'jpg'|'webp' }
+  },
+  'trim': {
+    format: 'video',
+    description: 'Trim/cut video to a specific time range',
+    category: 'utility',
+    outputOptions: [],
+    // expects options: { start: string, duration: string }
+  },
+  'resize': {
+    format: 'video',
+    description: 'Resize video to a specific resolution',
+    category: 'utility',
+    outputOptions: [],
+    // expects options: { width: number, height: number }
+  },
+  'watermark': {
+    format: 'video',
+    description: 'Add a watermark image or text overlay to video',
+    category: 'utility',
+    outputOptions: [],
+    // expects options: { watermarkPath: string, position: string }
+  },
+  // Thumbnail Collage
+  'thumbnail-collage': {
+    format: 'image',
+    description: 'Grab 9 frames from a video and display them in a singular square image (user chooses output type)',
+    category: 'utility',
+    outputOptions: [],
+    // expects options: { ext: 'png'|'jpg'|'webp' }
+    // The actual filtergraph will be handled in createFFmpegCommand
   }
 };
 
@@ -419,7 +597,115 @@ function createFFmpegCommand(input, output, preset, options = {}) {
   if (preset === 'custom' && options.customCommand) {
     return handleCustomCommand(input, output, options.customCommand);
   }
-  
+
+  // Handle advanced watermark preset
+  if (preset === 'watermark') {
+    const command = ffmpeg(input);
+    let filter = '';
+    const type = options.type || 'image';
+    const margin = Number(options.margin) || 10;
+    let x = 0, y = 0;
+    // Position logic
+    switch (options.position) {
+      case 'top-left': x = margin; y = margin; break;
+      case 'top-right': x = `W-w-${margin}`; y = margin; break;
+      case 'bottom-left': x = margin; y = `H-h-${margin}`; break;
+      case 'bottom-right': x = `W-w-${margin}`; y = `H-h-${margin}`; break;
+      case 'center': x = '(W-w)/2'; y = '(H-h)/2'; break;
+      case 'custom': x = Number(options.x) || 0; y = Number(options.y) || 0; break;
+      default: x = `W-w-${margin}`; y = `H-h-${margin}`;
+    }
+    // Timing logic
+    let enable = '';
+    if (options.start || options.end) {
+      const start = Number(options.start) || 0;
+      const end = Number(options.end) || 0;
+      if (start && end) enable = `between(t\,${start}\,${end})`;
+      else if (start) enable = `gte(t\,${start})`;
+      else if (end) enable = `lte(t\,${end})`;
+    }
+    // Fade logic (handled in filtergraph for text)
+    // Opacity logic
+    const opacity = typeof options.opacity === 'number' ? options.opacity : 1;
+    // Rotation logic
+    const rotation = Number(options.rotation) || 0;
+    // Image watermark
+    if (type === 'image') {
+      // Scale
+      const scale = Number(options.scale) || 100;
+      let overlayFilter = `overlay=${x}:${y}`;
+      if (enable) overlayFilter += `:enable='${enable}'`;
+      // Opacity for image watermark
+      let imageInput = options.watermarkPath || 'watermark.png';
+      // If opacity < 1, use colorchannelmixer
+      let imageFilter = `movie='${imageInput}',scale=iw*${scale/100}:ih*${scale/100}`;
+      if (opacity < 1) {
+        imageFilter += `,format=rgba,colorchannelmixer=aa=${opacity}`;
+      }
+      if (rotation) {
+        imageFilter += `,rotate=${rotation}*PI/180:ow=rotw(iw):oh=roth(ih):c=none`;
+      }
+      filter = `[0:v][1:v]${overlayFilter}`;
+      command.complexFilter([
+        `[0:v]null[v0];${imageFilter}[wm];[v0][wm]${overlayFilter}`
+      ]);
+      command.input(imageInput);
+    }
+    // Text watermark
+    else if (type === 'text') {
+      const fontfile = `/app/fonts/${options.fontfile || 'Arial.ttf'}`;
+      const text = (options.text || 'Watermark').replace(/:/g, '\:');
+      const fontsize = Number(options.fontsize) || 24;
+      const fontcolor = options.fontcolor || 'white@0.7';
+      const shadowx = Number(options.shadowx) || 2;
+      const shadowy = Number(options.shadowy) || 2;
+      const outlinecolor = options.outlinecolor || 'black';
+      const outlinewidth = Number(options.outlinewidth) || 2;
+      let drawtext = `drawtext=fontfile='${fontfile}':text='${text}':fontsize=${fontsize}:fontcolor=${fontcolor}:x=${x}:y=${y}:shadowx=${shadowx}:shadowy=${shadowy}:borderw=${outlinewidth}:bordercolor=${outlinecolor}`;
+      if (enable) drawtext += `:enable='${enable}'`;
+      if (rotation) drawtext += `:rotate=${rotation}*PI/180`;
+      filter = drawtext;
+      command.videoFilters(filter);
+    }
+    // Scrolling text watermark
+    else if (type === 'scrolling-text') {
+      const fontfile = `/app/fonts/${options.fontfile || 'Arial.ttf'}`;
+      const text = (options.text || 'Watermark').replace(/:/g, '\:');
+      const fontsize = Number(options.fontsize) || 24;
+      const fontcolor = options.fontcolor || 'white@0.7';
+      const shadowx = Number(options.shadowx) || 2;
+      const shadowy = Number(options.shadowy) || 2;
+      const outlinecolor = options.outlinecolor || 'black';
+      const outlinewidth = Number(options.outlinewidth) || 2;
+      const scrollspeed = Number(options.scrollspeed) || 50;
+      const scrollpos = options.scrollpos || 'bottom';
+      // y position for top/middle/bottom
+      let yscroll = 'h-line_h-10';
+      if (scrollpos === 'top') yscroll = '10';
+      else if (scrollpos === 'middle') yscroll = '(h-text_h)/2';
+      // x position for scrolling
+      // Loop/repeat logic
+      let xscroll = `mod(w-(mod(t*${scrollspeed},w+text_w)),w+text_w)-text_w`;
+      if (options.loop && Number(options.loopinterval) > 0) {
+        // Only show for a short interval, then hide, then repeat
+        const interval = Number(options.loopinterval);
+        // enable='mod(t\,${interval*2})<${interval}'
+        if (enable) {
+          enable += `*mod(t\,${interval*2})<${interval}`;
+        } else {
+          enable = `mod(t\,${interval*2})<${interval}`;
+        }
+      }
+      let drawtext = `drawtext=fontfile='${fontfile}':text='${text}':fontsize=${fontsize}:fontcolor=${fontcolor}:x=${xscroll}:y=${yscroll}:shadowx=${shadowx}:shadowy=${shadowy}:borderw=${outlinewidth}:bordercolor=${outlinecolor}`;
+      if (enable) drawtext += `:enable='${enable}'`;
+      filter = drawtext;
+      command.videoFilters(filter);
+    }
+    // Audio and output
+    command.output(output);
+    return command;
+  }
+
   // Get preset config or use default for standard presets
   const presetConfig = getPresetConfig(preset, options);
   
@@ -829,7 +1115,20 @@ app.post('/api/convert', async (req, res) => {
   const outputFilename = generateOutputFilename(filename, preset);
   const outputPath = path.join(OUTPUT_DIR, outputFilename);
   const conversionId = uuidv4();
-  
+
+  // Validate preset exists
+  if (!PRESETS[preset]) {
+    return res.status(400).json({
+      error: `Invalid preset: ${preset}`,
+      message: `Preset '${preset}' does not exist.`,
+    });
+  }
+
+  // Optionally warn if fileId is present but unused
+  if (fileId) {
+    console.warn('Received unused fileId in /api/convert:', fileId);
+  }
+
   // Initialize conversion object with all required properties
   const conversion = {
     id: conversionId,
@@ -843,29 +1142,29 @@ app.post('/api/convert', async (req, res) => {
     error: null,
     options: { ...options } // Store the options for reference
   };
-  
+
   // Store the conversion in active conversions
   activeConversions.set(conversionId, conversion);
-  
+
   try {
     if (!await fs.pathExists(inputPath)) {
       throw new Error('Input file not found');
     }
-    
+
     // Create the FFmpeg command with all required parameters
     const command = createFFmpegCommand(inputPath, outputPath, preset, options);
-    
+
     // Update conversion status to processing
     conversion.status = 'processing';
     activeConversions.set(conversionId, conversion);
-    
+
     // Broadcast initial progress
     broadcastProgress(conversionId, {
       status: 'processing',
       progress: 0,
       timemark: '00:00:00.00'
     });
-    
+
     command
       .on('start', (commandLine) => {
         console.log(`[${conversionId}] FFmpeg command: ${commandLine}`);
@@ -886,17 +1185,17 @@ app.post('/api/convert', async (req, res) => {
       .on('end', () => {
         const endTime = new Date();
         const duration = (endTime - conversion.startTime) / 1000; // in seconds
-        
+
         console.log(`[${conversionId}] Conversion completed in ${duration.toFixed(2)}s`);
-        
+
         // Get file stats for the output
         fs.stat(outputPath, (err, stats) => {
           if (err) {
             console.error(`[${conversionId}] Error getting output file stats:`, err);
           }
-          
+
           const result = {
-            id: conversionId,
+            conversionId: conversionId,
             status: 'completed',
             input: filename,
             output: outputFilename,
@@ -905,10 +1204,10 @@ app.post('/api/convert', async (req, res) => {
             downloadUrl: `/output/${outputFilename}`,
             completedAt: endTime.toISOString()
           };
-          
+
           // Send final progress update
           broadcastProgress(conversionId, { ...conversion, ...result });
-          
+
           // Clean up
           activeConversions.delete(conversionId);
         });
@@ -916,9 +1215,9 @@ app.post('/api/convert', async (req, res) => {
       .on('error', (err, stdout, stderr) => {
         console.error(`[${conversionId}] Conversion error:`, err);
         console.error(`[${conversionId}] FFmpeg stderr:`, stderr);
-        
+
         const errorInfo = {
-          id: conversionId,
+          conversionId: conversionId,
           status: 'error',
           error: 'Conversion failed',
           message: err.message,
@@ -927,18 +1226,18 @@ app.post('/api/convert', async (req, res) => {
           input: filename,
           output: outputFilename
         };
-        
+
         // Send error update
         broadcastProgress(conversionId, { ...conversion, ...errorInfo });
-        
+
         // Clean up
         activeConversions.delete(conversionId);
       })
       .run();
-    
-    // Respond immediately with conversion ID
+
+    // Respond immediately with conversionId
     res.status(202).json({
-      id: conversionId,
+      conversionId: conversionId,
       status: 'queued',
       message: 'Conversion started',
       progressUrl: `/api/conversion/${conversionId}/progress`,
