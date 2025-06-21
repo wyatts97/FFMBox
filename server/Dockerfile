@@ -25,6 +25,7 @@ RUN apk add --no-cache \
     openssl \
     tzdata \
     wget \
+    curl \
     && rm -rf /var/cache/apk/*
 
 # Copy built files
