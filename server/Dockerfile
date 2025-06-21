@@ -1,7 +1,7 @@
 # Stage 1: Dependencies
 FROM node:20.12.2-alpine3.18 as deps
 WORKDIR /app
-COPY server/package*.json ./
+COPY package*.json ./
 RUN npm ci --omit=dev || npm install --omit=dev
 
 # Stage 2: Builder with FFmpeg
@@ -10,7 +10,7 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++
 COPY --from=deps /app/package*.json ./
 RUN npm ci --omit=dev || npm install --omit=dev
-COPY server/ .
+COPY . .
 
 # Stage 3: Production image
 FROM node:20.12.2-alpine3.18
