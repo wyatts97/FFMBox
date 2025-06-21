@@ -65,7 +65,7 @@
 ### 1. Clone & Configure
 ```bash
 git clone https://github.com/yourusername/ffmbox.git
-cd ffmbox
+cd FFMBox
 cp .env.example .env
 # Edit .env as needed
 ```
