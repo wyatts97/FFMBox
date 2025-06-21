@@ -383,7 +383,7 @@ export const FFmpegPresets: React.FC<FFmpegPresetsProps> = ({
 
           {/* Presets list */}
           <ScrollArea className="h-[400px] pr-4">
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {filteredPresets.map((preset) => (
                 <Card 
                   key={preset.id}

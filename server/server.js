@@ -1014,7 +1014,36 @@ function generateOutputFilename(originalFilename, preset) {
   return `${baseName}-${preset}-${Date.now()}.${outputExt}`;
 }
 
-// API Endpoints
+// Settings config file
+const SETTINGS_PATH = path.join(__dirname, 'settings.json');
+async function getSettings() {
+  try {
+    if (await fs.pathExists(SETTINGS_PATH)) {
+      return await fs.readJson(SETTINGS_PATH);
+    }
+  } catch {}
+  return { retentionPeriod: 24, outputDir: '' };
+}
+async function setSettings(newSettings) {
+  const current = await getSettings();
+  const updated = { ...current, ...newSettings };
+  await fs.writeJson(SETTINGS_PATH, updated, { spaces: 2 });
+  return updated;
+}
+
+// API: Get settings
+app.get('/api/settings', async (req, res) => {
+  res.json(await getSettings());
+});
+// API: Set settings
+app.post('/api/settings', async (req, res) => {
+  const { retentionPeriod, outputDir } = req.body;
+  const updated = await setSettings({
+    ...(retentionPeriod !== undefined ? { retentionPeriod: Number(retentionPeriod) } : {}),
+    ...(outputDir !== undefined ? { outputDir: String(outputDir) } : {})
+  });
+  res.json(updated);
+});
 
 // List available fonts in the fonts directory
 app.get('/api/fonts', async (req, res) => {
@@ -1150,9 +1179,11 @@ app.post('/api/upload', (req, res, next) => {
 
 app.post('/api/convert', async (req, res) => {
   const { fileId, filename, preset, options = {} } = req.body;
+  const settings = await getSettings();
+  const outputDirSetting = settings.outputDir && settings.outputDir.trim() ? settings.outputDir : OUTPUT_DIR;
   const inputPath = path.join(UPLOAD_DIR, filename);
   const outputFilename = generateOutputFilename(filename, preset);
-  const outputPath = path.join(OUTPUT_DIR, outputFilename);
+  const outputPath = path.join(outputDirSetting, outputFilename);
   const conversionId = uuidv4();
 
   // Validate preset exists
@@ -1369,7 +1400,11 @@ app.get('/api/health', async (req, res) => {
 // Clean up old files
 app.post('/api/cleanup', async (req, res) => {
   try {
-    const { maxAgeHours = 24 } = req.body;
+    let maxAgeHours = req.body.maxAgeHours;
+    if (maxAgeHours === undefined) {
+      const settings = await getSettings();
+      maxAgeHours = settings.retentionPeriod ?? 24;
+    }
     const maxAgeMs = maxAgeHours * 60 * 60 * 1000; // Convert hours to milliseconds
     const now = Date.now();
     let deletedCount = 0;
