@@ -624,62 +624,6 @@ function applyFormatOptions(command, preset, options, presetConfig) {
   }
 }
 
-// Apply common video/audio options
-function applyCommonOptions(command, options, presetConfig) {
-  // Apply video codec
-  if (presetConfig.videoCodec) {
-    command.videoCodec(presetConfig.videoCodec);
-  }
-
-  // Apply audio codec
-  if (presetConfig.audioCodec) {
-    command.audioCodec(presetConfig.audioCodec);
-  }
-
-  // Apply additional output options
-  if (presetConfig.outputOptions && presetConfig.outputOptions.length > 0) {
-    if (Array.isArray(presetConfig.outputOptions)) {
-      command.outputOptions(presetConfig.outputOptions);
-    } else if (typeof presetConfig.outputOptions === 'string') {
-      command.outputOptions(presetConfig.outputOptions.split(' '));
-    }
-  }
-
-  // Apply video filters if specified
-  if (presetConfig.videoFilters) {
-    command.videoFilters(presetConfig.videoFilters);
-  }
-
-  // Apply preset if specified
-  if (options.preset) {
-    command.preset(options.preset);
-  }
-
-  // Apply dimensions if specified
-  if (options.width || options.height) {
-    command.size(`${options.width || '?'}x${options.height || '?'}`);
-  }
-
-  // Apply FPS if specified
-  if (options.fps) {
-    command.fps(options.fps);
-  }
-
-  // Apply quality if specified
-  if (options.quality !== undefined) {
-    command.outputOptions(`-q:v ${options.quality}`);
-  }
-
-  // Apply audio bitrate if specified
-  if (options.audioBitrate) {
-    command.audioBitrate(options.audioBitrate);
-  }
-
-  // Apply video bitrate if specified
-  if (options.videoBitrate) {
-    command.videoBitrate(options.videoBitrate);
-  }
-}
 function applyCommonOptions(command, options, presetConfig) {
   // Apply video codec
   if (presetConfig.videoCodec) {
