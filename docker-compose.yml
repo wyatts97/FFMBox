@@ -1,31 +1,38 @@
 services:
   ffmbox:
     build:
-      context: .
-      dockerfile: ./server/Dockerfile
+      context: ./server  # Changed context to server directory
+      dockerfile: Dockerfile
       target: builder
     environment:
       - NODE_ENV=development
       - DEBUG=*
       - PORT=5500
+      - HOST=0.0.0.0  # Explicitly bind to all interfaces
       - UPLOAD_DIR=/app/uploads
       - OUTPUT_DIR=/app/output
       - MAX_FILE_SIZE=500MB
       - FFMPEG_THREADS=2
       - CORS_ORIGIN=*
+      - NODE_OPTIONS=--inspect=0.0.0.0:9229  # For debugging
+    entrypoint: ["node", "--inspect=0.0.0.0:9229", "server.js"]
+    working_dir: /app
+    user: "1000:1000"  # Run as non-root user with UID 1000
     volumes:
+      - ./server:/app  # Mount entire server directory
       - ./uploads:/app/uploads
       - ./output:/app/output
+      # No need for node_modules volume as we're mounting the entire server directory
     ports:
       - "5500:5500"
       - "9229:9229" # For Node.js debugger
-    # Health check disabled for debugging
-    # healthcheck:
-    #   test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5500/api/health"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
-    #   start_period: 60s
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5500/api/health', {timeout: 10000}, res => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 120s  # Increased start period
+      disable: false
     logging:
       driver: "json-file"
       options:
@@ -45,7 +52,6 @@ services:
       - /tmp
       - /run
       - /var/run
-    user: "1000:1000" # Run as non-root user with UID 1000
 
   nginx:
     build:
