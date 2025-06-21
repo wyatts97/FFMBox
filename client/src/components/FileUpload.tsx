@@ -21,10 +21,29 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFilesSelected, disable
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'video/*': ['.mp4', '.avi', '.mov', '.mkv', '.webm'],
-      'audio/*': ['.mp3', '.wav', '.aac', '.flac']
+      // Video formats
+      'video/mp4': ['.mp4'],
+      'video/x-msvideo': ['.avi'],
+      'video/quicktime': ['.mov'],
+      'video/x-matroska': ['.mkv'],
+      'video/webm': ['.webm'],
+      // Audio formats
+      'audio/mpeg': ['.mp3'],
+      'audio/wav': ['.wav'],
+      'audio/aac': ['.aac', '.m4a'],
+      'audio/flac': ['.flac'],
+      // Image formats
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png'],
+      'image/webp': ['.webp'],
+      'image/avif': ['.avif'],
+      'image/gif': ['.gif'],
+      'image/tiff': ['.tiff', '.tif'],
+      'image/bmp': ['.bmp']
     },
-    disabled
+    disabled,
+    maxSize: 500 * 1024 * 1024, // 500MB max file size
+    multiple: true
   });
 
   return (

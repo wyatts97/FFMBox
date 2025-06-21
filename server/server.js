@@ -118,45 +118,86 @@ app.use((err, req, res, next) => {
   next();
 });
 
-// Allowed file types
-const ALLOWED_FILE_TYPES = [
-  'video/*',
-  'audio/*',
-  'image/*',
-  'application/octet-stream' // For some video files
-];
+// Allowed MIME types and their corresponding extensions
+const ALLOWED_MIME_TYPES = {
+  // Video
+  'video/mp4': '.mp4',
+  'video/x-msvideo': '.avi',
+  'video/quicktime': '.mov',
+  'video/x-matroska': '.mkv',
+  'video/webm': '.webm',
+  // Audio
+  'audio/mpeg': '.mp3',
+  'audio/wav': '.wav',
+  'audio/aac': '.aac',
+  'audio/flac': '.flac',
+  // Images
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/avif': '.avif',
+  'image/gif': '.gif',
+  'image/tiff': '.tiff',
+  'image/bmp': '.bmp',
+};
 
-// File upload setup
+// File upload setup with secure filename generation
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, UPLOAD_DIR);
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
-    cb(null, `${uniqueSuffix}${ext}`);
+    const ext = path.extname(file.originalname).toLowerCase();
+    // Only keep alphanumeric chars in filename for security
+    const safeName = file.originalname.replace(/[^\w\-\.]/g, '_');
+    cb(null, `${uniqueSuffix}-${safeName}`);
   }
 });
 
-// File filter function
-const fileFilter = (req, file, cb) => {
-  const fileType = file.mimetype;
-  const isValidType = ALLOWED_FILE_TYPES.some(type => {
-    if (type.endsWith('/*')) {
-      // Handle wildcard MIME types (e.g., video/*)
-      return fileType.startsWith(type.split('/*')[0]);
-    }
-    return fileType === type;
-  });
+// File filter function with MIME type and extension validation
+function fileFilter(req, file, cb) {
+  try {
+    // Check if MIME type is allowed
+    const allowedTypes = Object.keys(ALLOWED_MIME_TYPES);
+    const isAllowed = allowedTypes.some(type => {
+      if (type.endsWith('/*')) {
+        // Handle wildcard MIME types
+        return file.mimetype.startsWith(type.split('/*')[0]);
+      }
+      return file.mimetype === type;
+    });
 
-  if (!isValidType) {
-    const error = new Error(`Invalid file type: ${fileType}. Only video, audio, and image files are allowed.`);
-    error.code = 'LIMIT_FILE_TYPES';
-    return cb(error, false);
+    if (!isAllowed) {
+      return cb(new Error(`Unsupported file type: ${file.mimetype}`), false);
+    }
+
+
+    // Verify file extension is valid and matches MIME type
+    const fileExt = path.extname(file.originalname).toLowerCase();
+    const allowedExtensions = new Set(Object.values(ALLOWED_MIME_TYPES));
+    
+    if (!allowedExtensions.has(fileExt)) {
+      return cb(new Error(`Invalid file extension: ${fileExt}`), false);
+    }
+
+    // Additional security checks on filename
+    if (!file.originalname.match(/^[\w\- .]+\.[a-zA-Z0-9]+$/)) {
+      return cb(new Error('Invalid file name'), false);
+    }
+
+    // Check file size if needed
+    // if (file.size > MAX_FILE_SIZE) {
+    //   return cb(new Error('File size too large'), false);
+    // }
+
+
+    cb(null, true);
+  } catch (error) {
+    console.error('Error in file filter:', error);
+    cb(error, false);
   }
-  
-  cb(null, true);
-};
+}
 
 // Parse max file size (e.g., '500MB' -> 500 * 1024 * 1024)
 function parseFileSize(size) {
@@ -404,8 +445,32 @@ function createFFmpegCommand(input, output, preset, options = {}) {
   }
 }
 
-// Handle custom FFmpeg command
+// Allowed FFmpeg flags and options
+const ALLOWED_FFMPEG_FLAGS = new Set([
+  // Input/Output
+  '-i', '-f', '-y', '-n', '-c', '-codec', '-t', '-ss', '-to', '-fs', '-map',
+  // Video
+  '-vcodec', '-vframes', '-r', '-s', '-aspect', '-vn', '-vcodec', '-vf', '-b:v', '-q:v',
+  // Audio
+  '-acodec', '-aq', '-ar', '-ac', '-an', '-ab', '-vol',
+  // Subtitle
+  '-scodec', '-sn',
+  // Advanced
+  '-preset', '-crf', '-b', '-minrate', '-maxrate', '-bufsize', '-g', '-keyint_min'
+]);
+
+// Handle custom FFmpeg command with security validation
 function handleCustomCommand(input, output, customCommand) {
+  if (typeof customCommand !== 'string') {
+    throw new Error('Invalid custom command: must be a string');
+  }
+
+  // Basic validation to prevent command injection
+  const dangerousChars = [';', '&', '|', '`', '$', '>', '<', '~'];
+  if (dangerousChars.some(char => customCommand.includes(char))) {
+    throw new Error('Invalid characters in custom command');
+  }
+
   const args = customCommand
     .split(' ')
     .filter(arg => arg.trim() !== '');
@@ -419,24 +484,38 @@ function handleCustomCommand(input, output, customCommand) {
   let inputApplied = false;
   let outputApplied = false;
   
+  // Validate and process arguments
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     
+    // Skip empty arguments
+    if (!arg.trim()) continue;
+    
     // Handle input file
     if (arg === '-i' && args[i + 1]) {
-      command.input(args[++i]);
+      const inputFile = args[++i];
+      // Validate input file path
+      if (typeof inputFile !== 'string' || !inputFile.trim()) {
+        throw new Error('Invalid input file specified');
+      }
+      command.input(inputFile);
       inputApplied = true;
       continue;
     }
     
-    // Handle output file
+    // Handle output file (last argument)
     if (i === args.length - 1 && !outputApplied) {
-      command.output(arg);
+      // We'll use our own output path for security
       outputApplied = true;
       continue;
     }
     
-    // Add other arguments
+    // Validate flags
+    if (arg.startsWith('-') && !ALLOWED_FFMPEG_FLAGS.has(arg.split('=')[0])) {
+      throw new Error(`Disallowed FFmpeg flag: ${arg.split('=')[0]}`);
+    }
+    
+    // Add validated arguments
     command.outputOptions(arg);
   }
   

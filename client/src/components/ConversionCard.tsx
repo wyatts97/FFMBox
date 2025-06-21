@@ -2,11 +2,20 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { FileInfo } from '@/services/api';
 import { Play, Download, Trash2, Clock } from 'lucide-react';
+import { SelectPreset } from './SelectPreset';
+import type { PresetOptions } from '@/services/api';
+import { PRESETS } from '@/lib/ffmpeg';
 
 interface ConversionJob {
   id: string;
