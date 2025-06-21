@@ -127,7 +127,7 @@ const renderVideoOptions = (
         <select
           value={presetValue as string}
           onChange={createChangeHandler('preset', handleChange)}
-          className="w-full p-2 border rounded"
+          className="w-full p-2 border rounded text-black dark:text-black"
         >
           {['ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium', 'slow', 'slower', 'veryslow'].map((p) => (
             <option key={p} value={p}>
@@ -593,14 +593,32 @@ export const PRESETS: BasePreset[] = [
     category: 'utility',
     options: {},
     getOptions: (fileType, options, onChange) => {
-      // Font options (should match files in public/fonts)
-      const fontOptions = [
-        { label: 'Arial', value: 'Arial.ttf' },
-        { label: 'DejaVu Sans', value: 'DejaVuSans.ttf' },
-        { label: 'Liberation Sans', value: 'LiberationSans-Regular.ttf' },
-        { label: 'Open Sans', value: 'OpenSans-Regular.ttf' },
-        { label: 'Roboto', value: 'Roboto-Regular.ttf' },
-      ];
+      // Dynamic font options from API
+      const [fontOptions, setFontOptions] = React.useState<{label: string, value: string}[]>([]);
+      React.useEffect(() => {
+        fetch('/api/fonts')
+          .then(res => res.json())
+          .then(data => {
+            if (Array.isArray(data.fonts)) {
+              setFontOptions(
+                data.fonts.map(f => ({
+                  label: f.replace(/\.(ttf|otf)$/i, '').replace(/[-_]/g, ' '),
+                  value: f
+                }))
+              );
+            }
+          })
+          .catch(() => {
+            // fallback to some defaults if fetch fails
+            setFontOptions([
+              { label: 'Arial', value: 'Arial.ttf' },
+              { label: 'DejaVu Sans', value: 'DejaVuSans.ttf' },
+              { label: 'Liberation Sans', value: 'LiberationSans-Regular.ttf' },
+              { label: 'Open Sans', value: 'OpenSans-Regular.ttf' },
+              { label: 'Roboto', value: 'Roboto-Regular.ttf' },
+            ]);
+          });
+      }, []);
       return (
         <div className="space-y-4">
           <div>
@@ -690,12 +708,12 @@ export const PRESETS: BasePreset[] = [
           )}
           {(options.type === 'text' || options.type === 'scrolling-text') && (
             <>
-              <label className="block text-sm font-medium mb-1">Text</label>
-              <input
-                type="text"
+              <label className="block text-sm font-medium mb-1">Watermark Text</label>
+              <textarea
                 value={options.text as string || ''}
                 onChange={createChangeHandler('text', onChange)}
-                className="w-full p-2 border rounded mb-2"
+                className="w-full p-2 border rounded mb-2 min-h-[60px]"
+                placeholder="Enter watermark text here..."
               />
               <label className="block text-sm font-medium mb-1">Font</label>
               <select

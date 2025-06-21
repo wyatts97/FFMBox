@@ -60,7 +60,7 @@ export const SelectPreset: React.FC<SelectPresetProps> = ({
             <SelectItem key={preset.id} value={preset.id}>
               <div className="flex items-center gap-2">
                 {preset.icon && <span className="text-muted-foreground">{preset.icon}</span>}
-                {preset.name}
+                <span>{preset.name}</span>
               </div>
             </SelectItem>
           ))}

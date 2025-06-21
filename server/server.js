@@ -720,8 +720,21 @@ function createFFmpegCommand(input, output, preset, options = {}) {
     applyCommonOptions(command, options, presetConfig);
     
     // Set output format and path
-    const outputExt = path.extname(output).substring(1);
-    command.format(outputExt || presetConfig.format || 'mp4');
+    let outputExt = path.extname(output).substring(1);
+    // Fix: Use a real format for special presets
+    let realFormat = presetConfig.format || outputExt || 'mp4';
+    // Map special preset IDs to real formats
+    if (preset === 'thumbnail-collage' || preset === 'extract-frames' || preset === 'thumbnail') {
+      // Use the extension from the output file (e.g., jpg, png, webp)
+      if (!outputExt) {
+        outputExt = 'jpg';
+      }
+      realFormat = outputExt;
+    }
+    if (preset === 'webm-vp8') {
+      realFormat = 'webm';
+    }
+    command.format(realFormat);
     command.output(output);
     
     return command;
@@ -1002,6 +1015,32 @@ function generateOutputFilename(originalFilename, preset) {
 }
 
 // API Endpoints
+
+// List available fonts in the fonts directory
+app.get('/api/fonts', async (req, res) => {
+  try {
+    // Try both possible locations (Docker: /app/fonts, Dev: client/public/fonts)
+    const fontDirs = [
+      path.join(__dirname, '../client/public/fonts'), // dev
+      '/app/fonts' // docker
+    ];
+    let fonts = [];
+    for (const dir of fontDirs) {
+      try {
+        if (await fs.pathExists(dir)) {
+          const files = await fs.readdir(dir);
+          fonts = fonts.concat(files.filter(f => f.endsWith('.ttf') || f.endsWith('.otf')));
+        }
+      } catch {}
+    }
+    // Remove duplicates
+    fonts = Array.from(new Set(fonts));
+    res.json({ fonts });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to list fonts', message: err.message });
+  }
+});
+
 app.get('/api/ffmpeg-status', (req, res) => {
   ffmpeg.getAvailableFormats((err, formats) => {
     const imageFormats = ['jpeg', 'jpg', 'png', 'webp', 'avif', 'gif', 'tiff', 'bmp'];
