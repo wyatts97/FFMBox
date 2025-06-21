@@ -19,10 +19,8 @@ services:
     working_dir: /app
     user: "1000:1000"  # Run as non-root user with UID 1000
     volumes:
-      - ./server:/app  # Mount entire server directory
       - ./uploads:/app/uploads
       - ./output:/app/output
-      # No need for node_modules volume as we're mounting the entire server directory
     ports:
       - "5500:5500"
       - "9229:9229" # For Node.js debugger
