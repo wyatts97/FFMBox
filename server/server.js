@@ -559,6 +559,25 @@ app.post('/api/convert', async (req, res) => {
   const outputFilename = generateOutputFilename(filename, preset);
   const outputPath = path.join(OUTPUT_DIR, outputFilename);
   const conversionId = uuidv4();
+  
+  // Initialize conversion object with all required properties
+  const conversion = {
+    id: conversionId,
+    input: filename,
+    output: outputFilename,
+    preset,
+    status: 'pending',
+    progress: 0,
+    startTime: new Date(),
+    endTime: null,
+    error: null
+  };
+  
+  // Store the conversion in active conversions
+  activeConversions.set(conversionId, conversion);
+  
+  // Create the FFmpeg command with all required parameters
+  const command = createFFmpegCommand(inputPath, outputPath, preset, options);
 
   try {
     if (!await fs.pathExists(inputPath)) {
@@ -576,11 +595,6 @@ app.post('/api/convert', async (req, res) => {
       endTime: null,
       error: null
     };
-    
-    activeConversions.set(conversionId, conversion);
-    
-    // Create the FFmpeg command
-    const command = createFFmpegCommand(inputPath, outputPath, preset, options);
     
     command
       .on('start', (commandLine) => {
