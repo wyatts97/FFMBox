@@ -8,9 +8,34 @@ export interface FileInfo {
 }
 
 export interface ConversionOptions {
+  // Common options
+  quality?: number;
+  width?: number;
+  height?: number;
+  fps?: number;
+  preset?: string;
+  
+  // Audio options
+  audioBitrate?: number;
+  audioCodec?: string;
+  
+  // Video options
+  videoBitrate?: number;
+  videoCodec?: string;
+  
+  // Image options
+  lossless?: boolean;
+  progressive?: boolean;
+  compressionLevel?: number;
+  interlaced?: boolean;
+  speed?: number;
+  
+  // Custom command
+  customCommand?: string;
+  
+  // Legacy options
   startTime?: string;
   duration?: string;
-  quality?: string;
 }
 
 export interface ConversionResponse {

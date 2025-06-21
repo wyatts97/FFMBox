@@ -28,10 +28,22 @@ const Index = () => {
   const [setupComplete, setSetupComplete] = useState(true);
   const [files, setFiles] = useState<FileInfo[]>([]);
   const [conversions, setConversions] = useState<ConversionJob[]>([]);
+  
+  // Import the ProgressUpdate type from useWebSocket
+  type ProgressUpdate = {
+    conversionId: string;
+    progress: {
+      status: 'pending' | 'processing' | 'completed' | 'error';
+      percent?: number;
+      error?: string;
+      downloadUrl?: string;
+      timemark?: string;
+    };
+  };
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
 
-  const handleProgressUpdate = useCallback((update: any) => {
+  const handleProgressUpdate = useCallback((update: ProgressUpdate) => {
     setConversions(prev => prev.map(job => {
       if (job.id === update.conversionId) {
         return {
@@ -69,7 +81,38 @@ const Index = () => {
     }
   };
 
-  const handleConvert = async (file: FileInfo, preset: string, options: any = {}) => {
+  interface ConversionOptions {
+    // Common options
+    quality?: number;
+    width?: number;
+    height?: number;
+    fps?: number;
+    preset?: string;
+    
+    // Audio options
+    audioBitrate?: number;
+    audioCodec?: string;
+    
+    // Video options
+    videoBitrate?: number;
+    videoCodec?: string;
+    
+    // Image options
+    lossless?: boolean;
+    progressive?: boolean;
+    compressionLevel?: number;
+    interlaced?: boolean;
+    speed?: number;
+    
+    // Custom command
+    customCommand?: string;
+    
+    // Legacy options
+    startTime?: string;
+    duration?: string;
+  }
+
+  const handleConvert = async (file: FileInfo, preset: string, options: ConversionOptions = {}) => {
     try {
       const result = await apiService.convertFile(file.id, file.filename, preset, options);
       
@@ -101,10 +144,15 @@ const Index = () => {
     setConversions(prev => prev.filter(c => c.file.id !== fileId));
   };
 
-  const handlePresetConvert = (preset: string, customCommand?: string) => {
+  const handlePresetConvert = (preset: string, options: ConversionOptions = {}) => {
     files.forEach(file => {
-      const options = customCommand ? { customCommand } : {};
       handleConvert(file, preset, options);
+    });
+  };
+
+  const handleCustomCommand = (command: string) => {
+    files.forEach(file => {
+      handleConvert(file, 'custom', { customCommand: command });
     });
   };
 
@@ -136,6 +184,7 @@ const Index = () => {
             
             <FFmpegPresets 
               onPresetSelect={handlePresetConvert}
+              onCustomCommand={handleCustomCommand}
               disabled={files.length === 0}
             />
             

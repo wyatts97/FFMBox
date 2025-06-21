@@ -6,7 +6,7 @@ import express from 'express';
 import multer from 'multer';
 import cors from 'cors';
 import ffmpeg from 'fluent-ffmpeg';
-import { WebSocketServer } from 'ws';  // Keep WebSocketServer import
+import { WebSocket, WebSocketServer } from 'ws';  // Import both WebSocket and WebSocketServer
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs-extra';
 import path, { dirname } from 'path';
@@ -159,22 +159,34 @@ const fileFilter = (req, file, cb) => {
 };
 
 // Parse max file size (e.g., '500MB' -> 500 * 1024 * 1024)
-const parseFileSize = (size) => {
-  const units = {
-    'B': 1,
-    'KB': 1024,
-    'MB': 1024 * 1024,
-    'GB': 1024 * 1024 * 1024
+function parseFileSize(size) {
+  if (!size) return 500 * 1024 * 1024; // Default to 500MB
+  
+  const match = size.toString().match(/^(\d+)([kmg]?b?)?$/i);
+  if (!match) return 500 * 1024 * 1024; // Default to 500MB on invalid format
+  
+  const num = parseInt(match[1], 10);
+  if (isNaN(num)) return 500 * 1024 * 1024; // Default to 500MB on invalid number
+  
+  const unit = (match[2] || '').toLowerCase().charAt(0);
+  
+  const multipliers = {
+    '': 1,
+    'k': 1024,
+    'm': 1024 * 1024,
+    'g': 1024 * 1024 * 1024
   };
   
-  const match = size.match(/^(\d+)(B|KB|MB|GB)$/i);
-  if (!match) {
-    return 500 * 1024 * 1024; // Default to 500MB
+  const multiplier = multipliers[unit] || 1;
+  const result = num * multiplier;
+  
+  // Check for overflow
+  if (!Number.isSafeInteger(result)) {
+    return Number.MAX_SAFE_INTEGER; // Return max safe integer if overflow
   }
   
-  const [, value, unit] = match;
-  return parseInt(value, 10) * units[unit.toUpperCase()];
-};
+  return result;
+}
 
 const upload = multer({
   storage,
@@ -274,143 +286,377 @@ function broadcastProgress(conversionId, data) {
   }
 }
 
+// FFmpeg Preset Configuration
+const PRESETS = {
+  // Video presets
+  'mp4': {
+    format: 'mp4',
+    videoCodec: 'libx264',
+    audioCodec: 'aac',
+    outputOptions: ['-movflags +faststart', '-crf 23', '-preset medium', '-profile:v high', '-pix_fmt yuv420p'],
+    description: 'Standard MP4 with H.264 video and AAC audio',
+    category: 'video'
+  },
+  'mp4-hq': {
+    format: 'mp4',
+    videoCodec: 'libx264',
+    audioCodec: 'aac',
+    outputOptions: ['-movflags +faststart', '-crf 18', '-preset slower', '-profile:v high', '-pix_fmt yuv420p'],
+    description: 'High quality MP4 with better compression (larger file size)',
+    category: 'video'
+  },
+  'webm': {
+    format: 'webm',
+    videoCodec: 'libvpx-vp9',
+    audioCodec: 'libopus',
+    outputOptions: ['-b:v 1M', '-crf 30', '-deadline good', '-cpu-used 2'],
+    description: 'WebM with VP9 video and Opus audio',
+    category: 'video'
+  },
+  'gif': {
+    format: 'gif',
+    videoFilters: [
+      'fps=15',
+      'scale=640:-1:flags=lanczos',
+      'split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse'
+    ],
+    description: 'Animated GIF with optimized palette',
+    category: 'video'
+  },
+  'audio-extract': {
+    noVideo: true,
+    format: 'mp3',
+    audioCodec: 'libmp3lame',
+    audioQuality: 3,
+    description: 'Extract audio as MP3',
+    category: 'audio'
+  },
+  'mute': {
+    noAudio: true,
+    format: 'mp4',
+    videoCodec: 'libx264',
+    outputOptions: ['-crf 23'],
+    description: 'Video with audio removed',
+    category: 'video'
+  },
+  
+  // Image presets
+  'webp': {
+    format: 'webp',
+    outputOptions: ['-quality 85', '-compression_level 6'],
+    description: 'WebP image format',
+    category: 'image'
+  },
+  'jpeg': {
+    format: 'mjpeg',
+    outputOptions: ['-q:v 85', '-pix_fmt yuvj420p'],
+    description: 'JPEG image format',
+    category: 'image'
+  },
+  'png': {
+    format: 'png',
+    outputOptions: ['-compression_level 9'],
+    description: 'PNG image format',
+    category: 'image'
+  },
+  'avif': {
+    format: 'avif',
+    outputOptions: ['-qp 23', '-speed 6'],
+    description: 'AVIF image format',
+    category: 'image'
+  }
+};
+
 // FFmpeg Command Builder
 function createFFmpegCommand(input, output, preset, options = {}) {
-  const isImage = ['jpeg', 'jpg', 'png', 'webp', 'avif', 'tiff', 'bmp', 'gif'].includes(
-    path.extname(input).toLowerCase().substring(1)
-  );
+  // Validate input and output paths
+  if (!input || !output) {
+    throw new Error('Input and output paths are required');
+  }
 
-  let command = ffmpeg(input)
-    .outputOptions([
-      '-threads', FFMPEG_THREADS,
-      '-preset', process.env.FFMPEG_PRESET || (isImage ? 'slow' : 'medium'),
-      '-movflags', '+faststart'
-    ]);
+  // Handle custom command
+  if (preset === 'custom' && options.customCommand) {
+    return handleCustomCommand(input, output, options.customCommand);
+  }
+  
+  // Get preset config or use default for standard presets
+  const presetConfig = getPresetConfig(preset, options);
+  
+  // Initialize command with input
+  const command = ffmpeg(input);
+  
+  try {
+    // Apply format-specific options
+    applyFormatOptions(command, preset, options, presetConfig);
+    
+    // Apply common video/audio options
+    applyCommonOptions(command, options, presetConfig);
+    
+    // Set output format and path
+    const outputExt = path.extname(output).substring(1);
+    command.format(outputExt || presetConfig.format || 'mp4');
+    command.output(output);
+    
+    return command;
+  } catch (error) {
+    console.error('Error creating FFmpeg command:', error);
+    throw new Error(`Failed to create FFmpeg command: ${error.message}`);
+  }
+}
 
-  // Common options
-  const width = options.width || options.size?.split('x')[0];
-  const height = options.height || options.size?.split('x')[1];
+// Handle custom FFmpeg command
+function handleCustomCommand(input, output, customCommand) {
+  const args = customCommand
+    .split(' ')
+    .filter(arg => arg.trim() !== '');
+  
+  // Remove 'ffmpeg' if present
+  if (args[0] === 'ffmpeg') {
+    args.shift();
+  }
+  
+  const command = ffmpeg();
+  let inputApplied = false;
+  let outputApplied = false;
+  
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    
+    // Handle input file
+    if (arg === '-i' && args[i + 1]) {
+      command.input(args[++i]);
+      inputApplied = true;
+      continue;
+    }
+    
+    // Handle output file
+    if (i === args.length - 1 && !outputApplied) {
+      command.output(arg);
+      outputApplied = true;
+      continue;
+    }
+    
+    // Add other arguments
+    command.outputOptions(arg);
+  }
+  
+  // If input wasn't specified in the command, use the provided input
+  if (!inputApplied) {
+    command.input(input);
+  }
+  
+  // If output wasn't specified in the command, use the provided output
+  if (!outputApplied) {
+    command.output(output);
+  }
+  
+  // Handle format-specific options
+  const isImage = ['jpeg', 'jpg', 'png', 'webp', 'avif', 'gif'].includes(preset);
   const quality = options.quality || (isImage ? 85 : undefined);
   
-  // Add resize filter if dimensions are provided
-  if (width || height) {
-    const scaleFilter = [];
-    if (width && height) {
-      scaleFilter.push(`scale=${width}:${height}:force_original_aspect_ratio=decrease`);
-    } else if (width) {
-      scaleFilter.push(`scale=${width}:-1`);
-    } else if (height) {
-      scaleFilter.push(`scale=-1:${height}`);
+  // Apply preset configurations
+  if (preset === 'mp4' || preset === 'mp4-hq') {
+    command
+      .videoCodec('libx264')
+      .audioCodec('aac')
+      .outputOptions('-movflags +faststart');
+      
+    if (preset === 'mp4-hq') {
+      command.outputOptions('-preset slow', '-crf 18');
+    } else {
+      command.outputOptions('-crf 23');
     }
-    
-    // Add padding if maintainAspect is true
-    if (options.maintainAspect && (width || height)) {
-      scaleFilter.push(`pad=${width || 'iw'}:${height || 'ih'}:(ow-iw)/2:(oh-ih)/2:${options.padColor || 'black'}`);
-    }
-    
-    if (scaleFilter.length > 0) {
-      command = command.videoFilters(scaleFilter.join(','));
-    }
+  } else if (preset === 'webm') {
+    command
+      .videoCodec('libvpx-vp9')
+      .audioCodec('libopus')
+      .outputOptions('-b:v 0', '-crf 30');
+  } else if (preset === 'gif') {
+    command
+      .videoCodec('gif')
+      .outputOptions('-f gif');
+  } else if (preset === 'webp' || preset === 'avif') {
+    command.outputOptions(`-quality ${quality || 75}`);
+    if (options.lossless) command.outputOptions('-lossless 1');
+  } else if (preset === 'jpeg') {
+    command.outputOptions(`-q:v ${quality || 90}`);
+    if (options.progressive) command.outputOptions('-progressive 1');
+  } else if (preset === 'png') {
+    command.outputOptions(`-compression_level ${options.compressionLevel || 9}`);
+    if (options.interlaced) command.outputOptions('-interlace Plane');
   }
+  
+  // Apply video bitrate if specified
+  if (options.videoBitrate) {
+    command.videoBitrate(options.videoBitrate);
+  }
+  
+  return command;
+}
 
+// Get preset configuration with defaults
+function getPresetConfig(preset, options) {
+  const defaultConfig = {
+    format: preset,
+    videoCodec: 'libx264',
+    audioCodec: 'aac',
+    outputOptions: []
+  };
+
+  const presetConfig = {
+    ...defaultConfig,
+    ...PRESETS[preset] || {},
+    ...options
+  };
+
+  // Set format-specific defaults
   switch (preset) {
-    // Video presets
-    case 'mp4':
-      command = command
-        .videoCodec('libx264')
-        .audioCodec('aac')
-        .format('mp4')
-        .outputOptions('-crf 23');
-      break;
-      
     case 'webm':
-      command = command
-        .videoCodec('libvpx-vp9')
-        .audioCodec('libvorbis')
-        .format('webm')
-        .outputOptions(['-b:v 1M', '-crf 30']);
+      presetConfig.videoCodec = 'libvpx-vp9';
+      presetConfig.audioCodec = 'libopus';
       break;
-      
     case 'gif':
-      command = command
-        .videoFilters([
-          'fps=15',
-          'scale=640:-1:flags=lanczos',
-          'split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse'
-        ])
-        .format('gif');
+      presetConfig.videoCodec = 'gif';
+      presetConfig.outputOptions.push('-f gif');
       break;
-      
-    case 'audio-extract':
-      command = command
-        .noVideo()
-        .audioCodec('libmp3lame')
-        .format('mp3')
-        .audioQuality(3);
-      break;
-      
-    case 'mute':
-      command = command
-        .noAudio()
-        .videoCodec('libx264')
-        .format('mp4');
-      break;
-      
-    // Image presets
     case 'webp':
-      command = command
-        .format('webp')
-        .outputOptions([
-          `-quality ${quality}`,
-          `-compression_level ${options.compressionLevel || 6}`,
-          options.lossless ? '-lossless 1' : ''
-        ].filter(Boolean));
-      break;
-      
-    case 'jpeg':
-    case 'jpg':
-      command = command
-        .format('mjpeg')
-        .outputOptions([
-          `-q:v ${quality}`,
-          options.progressive ? '-pix_fmt yuvj420p' : '',
-          options.subsample ? `-subq ${options.subsample}` : ''
-        ].filter(Boolean));
-      break;
-      
-    case 'png':
-      command = command
-        .format('png')
-        .outputOptions([
-          `-compression_level ${options.compressionLevel || 9}`,
-          options.interlace ? '-interlace plane' : ''
-        ].filter(Boolean));
-      break;
-      
     case 'avif':
-      command = command
-        .format('avif')
-        .outputOptions([
-          `-qp ${31 - Math.floor((quality / 100) * 31)}`,
-          `-speed ${options.speed || 6}`
-        ].filter(Boolean));
+      presetConfig.outputOptions.push(`-quality ${options.quality || 75}`);
+      if (options.lossless) presetConfig.outputOptions.push('-lossless 1');
       break;
-      
-    default:
-      // For unknown presets, try to use the preset name as the format
-      command = command.format(preset);
+    case 'jpeg':
+      presetConfig.outputOptions.push(`-q:v ${options.quality || 90}`);
+      if (options.progressive) presetConfig.outputOptions.push('-progressive 1');
+      break;
+    case 'png':
+      presetConfig.outputOptions.push(`-compression_level ${options.compressionLevel || 9}`);
+      if (options.interlaced) presetConfig.outputOptions.push('-interlace Plane');
+      break;
   }
 
-  if (options.startTime) command.seekInput(options.startTime);
-  if (options.duration) command.duration(options.duration);
-  if (options.quality && preset !== 'gif') command.videoBitrate(options.quality);
-  if (options.watermarkPath && fs.existsSync(options.watermarkPath)) {
-    command.complexFilter([
-      `[0:v][1:v]overlay=W-w-10:H-h-10[out]`
-    ]).input(options.watermarkPath);
+  return presetConfig;
+}
+
+// Apply format-specific options
+function applyFormatOptions(command, preset, options, presetConfig) {
+  // Apply preset if specified
+  if (options.preset) {
+    command.preset(options.preset);
+  }
+}
+
+// Apply common video/audio options
+function applyCommonOptions(command, options, presetConfig) {
+  // Apply video codec
+  if (presetConfig.videoCodec) {
+    command.videoCodec(presetConfig.videoCodec);
   }
 
-  return command.output(output);
+  // Apply audio codec
+  if (presetConfig.audioCodec) {
+    command.audioCodec(presetConfig.audioCodec);
+  }
+
+  // Apply additional output options
+  if (presetConfig.outputOptions && presetConfig.outputOptions.length > 0) {
+    if (Array.isArray(presetConfig.outputOptions)) {
+      command.outputOptions(presetConfig.outputOptions);
+    } else if (typeof presetConfig.outputOptions === 'string') {
+      command.outputOptions(presetConfig.outputOptions.split(' '));
+    }
+  }
+
+  // Apply video filters if specified
+  if (presetConfig.videoFilters) {
+    command.videoFilters(presetConfig.videoFilters);
+  }
+
+  // Apply preset if specified
+  if (options.preset) {
+    command.preset(options.preset);
+  }
+
+  // Apply dimensions if specified
+  if (options.width || options.height) {
+    command.size(`${options.width || '?'}x${options.height || '?'}`);
+  }
+
+  // Apply FPS if specified
+  if (options.fps) {
+    command.fps(options.fps);
+  }
+
+  // Apply quality if specified
+  if (options.quality !== undefined) {
+    command.outputOptions(`-q:v ${options.quality}`);
+  }
+
+  // Apply audio bitrate if specified
+  if (options.audioBitrate) {
+    command.audioBitrate(options.audioBitrate);
+  }
+
+  // Apply video bitrate if specified
+  if (options.videoBitrate) {
+    command.videoBitrate(options.videoBitrate);
+  }
+}
+function applyCommonOptions(command, options, presetConfig) {
+  // Apply video codec
+  if (presetConfig.videoCodec) {
+    command.videoCodec(presetConfig.videoCodec);
+  }
+
+  // Apply audio codec
+  if (presetConfig.audioCodec) {
+    command.audioCodec(presetConfig.audioCodec);
+  }
+
+  // Apply additional output options
+  if (presetConfig.outputOptions && presetConfig.outputOptions.length > 0) {
+    if (Array.isArray(presetConfig.outputOptions)) {
+      command.outputOptions(presetConfig.outputOptions);
+    } else if (typeof presetConfig.outputOptions === 'string') {
+      command.outputOptions(presetConfig.outputOptions.split(' '));
+    }
+  }
+
+  // Apply video filters if specified
+  if (presetConfig.videoFilters) {
+    command.videoFilters(presetConfig.videoFilters);
+  }
+
+  // Apply preset if specified
+  if (options.preset) {
+    command.preset(options.preset);
+  }
+
+  // Apply dimensions if specified
+  if (options.width || options.height) {
+    command.size(`${options.width || '?'}x${options.height || '?'}`);
+  }
+
+  // Apply FPS if specified
+  if (options.fps) {
+    command.fps(options.fps);
+  }
+
+  // Apply quality if specified
+  if (options.quality !== undefined) {
+    command.outputOptions(`-q:v ${options.quality}`);
+  }
+
+  // Apply audio bitrate if specified
+  if (options.audioBitrate) {
+    command.audioBitrate(options.audioBitrate);
+  }
+
+  // Apply video bitrate if specified
+  if (options.videoBitrate) {
+    command.videoBitrate(options.videoBitrate);
+  }
+  
+  return command;
 }
 
 function generateOutputFilename(originalFilename, preset) {
@@ -571,31 +817,31 @@ app.post('/api/convert', async (req, res) => {
     progress: 0,
     startTime: new Date(),
     endTime: null,
-    error: null
+    error: null,
+    options: { ...options } // Store the options for reference
   };
   
   // Store the conversion in active conversions
   activeConversions.set(conversionId, conversion);
   
-  // Create the FFmpeg command with all required parameters
-  const command = createFFmpegCommand(inputPath, outputPath, preset, options);
-
   try {
     if (!await fs.pathExists(inputPath)) {
-      return res.status(404).json({ error: 'Input file not found' });
+      throw new Error('Input file not found');
     }
-
-    const conversion = {
-      id: conversionId,
-      input: filename,
-      output: outputFilename,
-      preset,
+    
+    // Create the FFmpeg command with all required parameters
+    const command = createFFmpegCommand(inputPath, outputPath, preset, options);
+    
+    // Update conversion status to processing
+    conversion.status = 'processing';
+    activeConversions.set(conversionId, conversion);
+    
+    // Broadcast initial progress
+    broadcastProgress(conversionId, {
       status: 'processing',
       progress: 0,
-      startTime: new Date(),
-      endTime: null,
-      error: null
-    };
+      timemark: '00:00:00.00'
+    });
     
     command
       .on('start', (commandLine) => {
@@ -688,7 +934,7 @@ app.get('/api/conversion/:id', (req, res) => {
 });
 
 // Enhanced health check endpoint
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
   try {
     // Check if directories exist and are writable
     const checkDir = (dir) => {
@@ -709,21 +955,29 @@ app.get('/api/health', (req, res) => {
     // Get FFmpeg version info
     let ffmpegInfo = { available: false };
     try {
-      const { execSync } = require('child_process');
+      const { execSync } = await import('child_process');
       let ffmpegVersionStr = '';
       try {
         ffmpegVersionStr = execSync('ffmpeg -version').toString().split('\n')[0];
+        ffmpegInfo = {
+          available: true,
+          version: ffmpegVersionStr
+        };
       } catch (e) {
         console.error('FFmpeg version check failed:', e);
-        ffmpegVersionStr = 'unknown';
+        ffmpegInfo = {
+          available: false,
+          error: e.message,
+          version: 'unknown'
+        };
       }
-      ffmpegInfo = {
-        available: true,
-        version: ffmpegVersionStr
-      };
     } catch (err) {
       console.error('FFmpeg version check failed:', err);
-      ffmpegInfo.error = err.message;
+      ffmpegInfo = {
+        available: false,
+        error: err.message,
+        version: 'unknown'
+      };
     }
 
     res.status(isHealthy ? 200 : 503).json({ 
