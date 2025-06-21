@@ -1,12 +1,20 @@
-require('dotenv').config();
-const express = require('express');
-const multer = require('multer');
-const cors = require('cors');
-const ffmpeg = require('fluent-ffmpeg');
-const WebSocket = require('ws');
-const { v4: uuidv4 } = require('uuid');
-const fs = require('fs-extra');
-const path = require('path');
+import dotenv from 'dotenv';
+import express from 'express';
+import multer from 'multer';
+import cors from 'cors';
+import ffmpeg from 'fluent-ffmpeg';
+import { WebSocketServer } from 'ws';
+import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs-extra';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+dotenv.config();
+
+// ES modules equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Validate required environment variables
 const requiredEnvVars = ['PORT', 'UPLOAD_DIR', 'OUTPUT_DIR'];
@@ -179,11 +187,17 @@ const upload = multer({
   }
 }).array('files');
 
-// Create HTTP server and WebSocket server early
-const httpServer = require('http').createServer(app);
+// Create HTTP server
+const httpServer = createServer(app);
 
-// Initialize WebSocket server
-const wss = new WebSocket.Server({
+// Export the app for testing (will be overridden in non-test environments)
+let exported = { app, server: httpServer };
+if (process.env.NODE_ENV !== 'test') {
+  exported = null;
+}
+
+// Create WebSocket server
+const wss = new WebSocketServer({
   server: httpServer,
   clientTracking: true,
   perMessageDeflate: {
@@ -875,20 +889,6 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`║ FFmpeg Threads: ${FFMPEG_THREADS}${' '.repeat(33 - FFMPEG_THREADS.toString().length)}║`);
   console.log('╚══════════════════════════════════════════════════╝');
   console.log(`Server started at: ${new Date().toISOString()}`);
-  
-  // Log available FFmpeg codecs and formats
-  console.log('\nFFmpeg version:');
-  require('child_process').exec('ffmpeg -version', (err, stdout) => {
-    if (err) {
-      console.error('Error getting FFmpeg version:', err);
-      return;
-    }
-    console.log(stdout.split('\n').slice(0, 5).join('\n'));
-  });
-  
-  console.log(`HTTP Server running on port ${PORT}`);
-  console.log(`WebSocket server active on port ${PORT}`);
-  console.log(`Health check available at http://localhost:${PORT}/api/health`);
 });
 
 // Handle server errors
@@ -913,3 +913,21 @@ httpServer.on('error', (error) => {
       throw error;
   }
 });
+
+// Log FFmpeg version
+import { exec } from 'child_process';
+console.log('\nFFmpeg version:');
+exec('ffmpeg -version', (err, stdout) => {
+  if (err) {
+    console.error('Error getting FFmpeg version:', err);
+    return;
+  }
+  console.log(stdout.split('\n').slice(0, 5).join('\n'));
+});
+
+console.log(`HTTP Server running on port ${PORT}`);
+console.log(`WebSocket server active on port ${PORT}`);
+console.log(`Health check available at http://localhost:${PORT}/api/health`);
+
+// Export the app for testing
+export const testExports = process.env.NODE_ENV === 'test' ? { app, server: httpServer } : null;
