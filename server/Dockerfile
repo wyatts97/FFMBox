@@ -36,14 +36,15 @@ COPY start-server.sh /app/start-server.sh
 RUN chmod +x /app/start-server.sh
 
 # Create necessary directories with correct permissions
-RUN mkdir -p /app/uploads /app/output \
+RUN mkdir -p /app/uploads /app/output /app/logs \
     && chown -R node:node /app \
     && chmod -R 755 /app \
-    && chmod -R 775 /app/uploads /app/output
+    && chmod -R 775 /app/uploads /app/output /app/logs
 
-# Create non-root user and set permissions
-RUN addgroup -S nodejs && adduser -S node -G nodejs \
-    && chown -R node:nodejs /app
+# Ensure node user has write access to required directories
+RUN chgrp -R 0 /app \
+    && chmod -R g=u /app \
+    && chmod g=u /etc/passwd
 
 # Healthcheck script (run as root to avoid permission issues)
 RUN echo '#!/bin/sh\n\
