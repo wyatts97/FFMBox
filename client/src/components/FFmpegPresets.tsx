@@ -1,38 +1,30 @@
-import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
-import { 
-  Video, 
-  Image,
-  Settings,
-  Film,
-  Music2,
-  FileImage,
-  FileVideo,
-  Play
-} from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
+import { FileVideo, FileAudio, FileImage, FileCode, Play, Trash2, Plus, Film, Music2, Image as ImageIcon, Settings } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { PresetSettingsCard } from "./PresetCards";
+import { CustomPresetCard } from "./CustomPresetCard";
+import PresetService from '@/services/presetService';
+import type { Preset, CustomPreset, PresetOptions, PresetCategory } from '@/lib/ffmpeg';
+// Type for the combined preset that can be either built-in or custom
+type AnyPreset = Preset | CustomPreset;
 
-type PresetOptions = {
-  quality?: number;
-  width?: number;
-  height?: number;
-  audioBitrate?: number;
-  videoBitrate?: number;
-  fps?: number;
-  preset?: string;
-  audioCodec?: string;
-  lossless?: boolean;
-  progressive?: boolean;
-  compressionLevel?: number;
-  interlaced?: boolean;
-  speed?: number;
-  [key: string]: string | number | boolean | undefined;
+// Helper function to check if a preset is a custom preset
+const isCustomPreset = (preset: AnyPreset | null): preset is CustomPreset => {
+  return preset !== null && preset.category === 'custom';
+};
+
+// Helper function to check if a preset is a built-in preset
+const isPreset = (preset: AnyPreset | null): preset is Preset => {
+  return preset !== null && preset.category !== 'custom';
 };
 
 interface FFmpegPresetsProps {
@@ -42,17 +34,8 @@ interface FFmpegPresetsProps {
   fileType?: string;
 }
 
-interface Preset {
-  id: string;
-  name: string;
-  description: string;
-  icon: React.ReactNode;
-  category: 'video' | 'audio' | 'image' | 'conversion';
-  options?: PresetOptions;
-  getOptions?: (fileType: string) => React.ReactNode;
-}
-
-// Moved PresetOptions type to the top
+// Type guard to check if a value is a Preset
+// Using the one defined above
 
 const presets: Preset[] = [
   {
@@ -97,7 +80,7 @@ const presets: Preset[] = [
     id: 'mp4-hq',
     name: 'MP4 High Quality',
     description: 'High quality MP4 with better compression',
-    icon: <Film className="h-4 w-4" />,
+    icon: <FileVideo className="h-4 w-4" />, // Changed from Film
     category: 'video',
     options: { quality: 18, width: 1920, height: 1080, fps: 60, preset: 'slow' }
   },
@@ -105,7 +88,7 @@ const presets: Preset[] = [
     id: 'webm',
     name: 'WebM',
     description: 'WebM with VP9 video and Opus audio',
-    icon: <Video className="h-4 w-4" />,
+    icon: <FileVideo className="h-4 w-4" />, // Changed from Video
     category: 'video',
     options: { quality: 30, width: 1280, height: 720, fps: 30 }
   },
@@ -113,7 +96,7 @@ const presets: Preset[] = [
     id: 'gif',
     name: 'Animated GIF',
     description: 'Optimized animated GIF',
-    icon: <Image className="h-4 w-4" />,
+    icon: <FileImage className="h-4 w-4" />, // Changed from Image
     category: 'conversion',
     options: { fps: 15, width: 640, height: 360 }
   },
@@ -121,7 +104,7 @@ const presets: Preset[] = [
     id: 'audio-extract',
     name: 'Extract Audio',
     description: 'Extract audio as MP3',
-    icon: <Music2 className="h-4 w-4" />,
+    icon: <FileAudio className="h-4 w-4" />, // Changed from Music2
     category: 'audio',
     options: { audioBitrate: 192, audioCodec: 'libmp3lame' }
   },
@@ -159,19 +142,29 @@ const presets: Preset[] = [
   }
 ];
 
-export const FFmpegPresets: React.FC<FFmpegPresetsProps> = ({ 
-  onPresetSelect, 
+// Categories will be defined in the component to use the custom hook
+
+const FFmpegPresets: React.FC<FFmpegPresetsProps> = ({
+  onPresetSelect,
   onCustomCommand,
-  disabled,
-  fileType = '' 
+  disabled = false,
+  fileType = ''
 }) => {
-  const [selectedPreset, setSelectedPreset] = useState<Preset | null>(null);
+  // State for presets and UI
+  const [selectedPreset, setSelectedPreset] = useState<AnyPreset | null>(null);
   const [options, setOptions] = useState<Partial<PresetOptions>>({});
   const [customCommand, setCustomCommand] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'video' | 'audio' | 'image' | 'conversion'>('all');
+  const [saveAsPreset, setSaveAsPreset] = useState(false);
+  const [presetName, setPresetName] = useState('');
+  const [presetDescription, setPresetDescription] = useState('');
+  const [showManagePresets, setShowManagePresets] = useState(false);
   const [activeTab, setActiveTab] = useState('presets');
+  const [selectedCategory, setSelectedCategory] = useState<PresetCategory>('all');
+  const [customPresets, setCustomPresets] = useState<CustomPreset[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingPreset, setEditingPreset] = useState<CustomPreset | null>(null);
 
-  type CategoryType = 'all' | 'video' | 'audio' | 'image' | 'conversion';
+  type CategoryType = PresetCategory;
   
   interface CategoryItem {
     id: CategoryType;
@@ -179,29 +172,50 @@ export const FFmpegPresets: React.FC<FFmpegPresetsProps> = ({
     icon?: React.ReactNode;
   }
 
-  const categories: CategoryItem[] = [
-    { id: 'all', name: 'All' },
-    { id: 'video', name: 'Video', icon: <Film className="h-4 w-4" /> },
-    { id: 'audio', name: 'Audio', icon: <Music2 className="h-4 w-4" /> },
-    { id: 'image', name: 'Image', icon: <Image className="h-4 w-4" /> },
-    { id: 'conversion', name: 'Conversion', icon: <Settings className="h-4 w-4" /> }
-  ];
+  // Define categories with proper typing
+  const categories = useMemo(() => {
+    const baseCategories: CategoryItem[] = [
+      { id: 'all' as const, name: 'All', icon: <FileCode className="h-4 w-4" /> },
+      { id: 'video' as const, name: 'Video', icon: <Film className="h-4 w-4" /> },
+      { id: 'audio' as const, name: 'Audio', icon: <Music2 className="h-4 w-4" /> },
+      { id: 'image' as const, name: 'Image', icon: <ImageIcon className="h-4 w-4" /> },
+      { id: 'conversion' as const, name: 'Conversion', icon: <Settings className="h-4 w-4" /> },
+    ];
 
-  const filteredPresets = useMemo(() => 
-    selectedCategory === 'all' 
-      ? presets 
-      : presets.filter(preset => preset.category === selectedCategory),
-    [selectedCategory]
-  );
+    // Only show Custom category if there are custom presets
+    if (customPresets.length > 0) {
+      return [
+        ...baseCategories,
+        { id: 'custom' as const, name: 'Custom', icon: <Settings className="h-4 w-4" /> }
+      ];
+    }
+    return baseCategories;
+  }, [customPresets]);
+
+  // Load custom presets on mount
+  useEffect(() => {
+    const loadedPresets = PresetService.getAllPresets();
+    setCustomPresets(loadedPresets);
+  }, []);
+
+  const filteredPresets = useMemo(() => {
+    const allPresets = [...presets, ...customPresets];
+    if (selectedCategory === 'all') return allPresets;
+    return allPresets.filter(preset => preset.category === selectedCategory);
+  }, [customPresets, selectedCategory]);
   
   const isImage = useMemo(() => {
     if (!selectedPreset) return false;
+    // For custom presets, we can't determine if they're for images
+    if ('category' in selectedPreset && selectedPreset.category === 'custom') {
+      return false;
+    }
     return ['jpeg', 'jpg', 'png', 'webp', 'avif', 'gif', 'tiff', 'bmp'].includes(selectedPreset.id);
   }, [selectedPreset]);
 
   const handleOptionChange = <K extends keyof PresetOptions>(
     key: K, 
-    value: number | string | boolean | undefined
+    value: PresetOptions[K]
   ) => {
     setOptions(prev => ({
       ...prev,
@@ -209,20 +223,98 @@ export const FFmpegPresets: React.FC<FFmpegPresetsProps> = ({
     }));
   };
 
-  const handlePresetSelect = (preset: Preset) => {
+  const handlePresetSelect = (preset: Preset | CustomPreset) => {
+    if (!preset) return;
+    
     setSelectedPreset(preset);
-    setOptions(preset.options || {});
+    
+    // Only set options for built-in presets
+    if (isPreset(preset)) {
+      setOptions({
+        ...preset.options,
+        // Ensure required options have default values
+        quality: preset.options?.quality ?? 23,
+        width: preset.options?.width,
+        height: preset.options?.height,
+        fps: preset.options?.fps,
+      });
+    } else {
+      // Reset options for custom presets
+      setOptions({});
+    }
+  };
+  
+  // Helper to safely access preset options
+  const getPresetOptions = (preset: Preset | CustomPreset): PresetOptions => {
+    return isPreset(preset) ? (preset.options || {}) : {};
+  };
+  
+  // Helper to safely access getOptions function
+  const getPresetGetOptions = (preset: Preset | CustomPreset): ((fileType: string) => React.ReactNode) | undefined => {
+    return isPreset(preset) ? preset.getOptions : undefined;
   };
 
-  const handleApply = () => {
+  const handleApply = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
     if (activeTab === 'custom' && customCommand) {
       onCustomCommand(customCommand);
-    } else if (selectedPreset) {
-      const mergedOptions: PresetOptions = {
-        ...(selectedPreset.options || {}),
-        ...options
-      } as PresetOptions;
-      onPresetSelect(selectedPreset.id, mergedOptions);
+      
+      // Save as preset if requested
+      if (saveAsPreset && presetName.trim()) {
+        const newPreset: Omit<CustomPreset, 'id' | 'category'> = {
+          name: presetName.trim(),
+          command: customCommand.trim(),
+          description: presetDescription.trim() || `Custom preset: ${presetName.trim()}`,
+          // Don't include the icon here as it will be set to undefined in the service
+        };
+        
+        try {
+          // Save the preset using the service
+          PresetService.savePreset(newPreset);
+          // Refresh the presets list
+          setCustomPresets(PresetService.getAllPresets());
+          setPresetName('');
+          setPresetDescription('');
+          setSaveAsPreset(false);
+        } catch (error) {
+          console.error('Failed to save preset:', error);
+          // You might want to show an error message to the user here
+        }
+      }
+      return;
+    }
+    
+    if (!selectedPreset) return;
+
+    if (isPreset(selectedPreset)) {
+      onPresetSelect(selectedPreset.id, { ...selectedPreset.options, ...options });
+    } else {
+      onCustomCommand(selectedPreset.command);
+    }
+  };
+
+  const handleDeletePreset = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    
+    if (!id) {
+      console.warn('Cannot delete preset: No ID provided');
+      return;
+    }
+
+    try {
+      // Don't delete if this is the currently selected preset
+      if (selectedPreset && 'id' in selectedPreset && selectedPreset.id === id) {
+        setSelectedPreset(null);
+      }
+      
+      // Remove from custom presets using the service
+      const updatedPresets = PresetService.deletePreset(id);
+      
+      // Update local state
+      setCustomPresets(updatedPresets);
+    } catch (error) {
+      console.error('Failed to delete preset:', error);
+      // You might want to show an error message to the user here
     }
   };
 
@@ -251,16 +343,20 @@ export const FFmpegPresets: React.FC<FFmpegPresetsProps> = ({
               <CardContent>
           {/* Category Tabs */}
           <div className="flex flex-wrap gap-2 mb-4">
-            {categories.map((category) => (
+            {categories.map((categoryItem) => (
               <Button
-                key={category.id}
-                variant={selectedCategory === category.id ? 'default' : 'outline'}
+                key={categoryItem.id}
+                type="button"
+                variant={selectedCategory === categoryItem.id ? 'default' : 'outline'}
                 size="sm"
-                className="gap-2"
-                onClick={() => setSelectedCategory(category.id)}
+                className={`gap-2 transition-colors ${selectedCategory === categoryItem.id ? 'shadow-md' : 'hover:bg-accent/50'}`}
+                onClick={() => setSelectedCategory(categoryItem.id)}
+                aria-pressed={selectedCategory === categoryItem.id}
+                aria-label={`Filter by ${categoryItem.name} category`}
+                title={`Show ${categoryItem.name} presets`}
               >
-                {category.icon}
-                {category.name}
+                {categoryItem.icon}
+                <span>{categoryItem.name}</span>
               </Button>
             ))}
           </div>
@@ -299,93 +395,40 @@ export const FFmpegPresets: React.FC<FFmpegPresetsProps> = ({
 
           {/* Options Panel */}
           {selectedPreset && (
-            <Card className="w-full md:w-96">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  {selectedPreset.name} Settings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {selectedPreset.getOptions ? (
-                  selectedPreset.getOptions(fileType)
-                ) : (
-                  <div className="space-y-4">
-                    {selectedPreset.options?.quality !== undefined && (
-                      <div>
-                        <Label>Quality</Label>
-                        <Slider
-                          min={0}
-                          max={selectedPreset.id.includes('mp4') ? 51 : 100}
-                          step={1}
-                          value={[options.quality || selectedPreset.options.quality || 0]}
-                          onValueChange={([value]) => 
-                            handleOptionChange('quality', value)
-                          }
-                        />
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>Best</span>
-                          <span>Worst</span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {(selectedPreset.options?.width || selectedPreset.options?.height) && (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Width (px)</Label>
-                          <Input 
-                            type="number" 
-                            value={options.width || selectedPreset.options.width || ''} 
-                            onChange={(e) => handleOptionChange('width', parseInt(e.target.value) || 0)}
-                          />
-                        </div>
-                        <div>
-                          <Label>Height (px)</Label>
-                          <Input 
-                            type="number" 
-                            value={options.height || selectedPreset.options.height || ''} 
-                            onChange={(e) => handleOptionChange('height', parseInt(e.target.value) || 0)}
-                          />
-                        </div>
-                      </div>
-                    )}
-                    
-                    {selectedPreset.options?.fps !== undefined && (
-                      <div>
-                        <Label>FPS</Label>
-                        <Input 
-                          type="number" 
-                          value={options.fps !== undefined ? options.fps : selectedPreset.options.fps}
-                          onChange={(e) => handleOptionChange('fps', parseInt(e.target.value) || 30)}
-                        />
-                      </div>
-                    )}
-                    
-                    {selectedPreset.options?.audioBitrate !== undefined && (
-                      <div>
-                        <Label>Audio Bitrate (kbps)</Label>
-                        <Input 
-                          type="number" 
-                          value={options.audioBitrate !== undefined ? options.audioBitrate : selectedPreset.options.audioBitrate}
-                          onChange={(e) => handleOptionChange('audioBitrate', parseInt(e.target.value) || 128)}
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-              <CardFooter className="flex justify-end">
-                <Button 
-                  onClick={handleApply}
-                  disabled={disabled}
-                  className="gap-2"
-                >
-                  <Play className="h-4 w-4" />
-                  Apply {selectedPreset.name}
-                </Button>
-              </CardFooter>
-            </Card>
+            isPreset(selectedPreset) ? (
+              <PresetSettingsCard 
+                key={`preset-${selectedPreset.id}`}
+                preset={selectedPreset}
+                fileType={fileType}
+                options={{
+                  // Merge default options with any user overrides
+                  ...selectedPreset.options,
+                  ...options
+                }}
+                disabled={disabled}
+                onApply={handleApply}
+                onOptionChange={handleOptionChange}
+              />
+            ) : (
+              <CustomPresetCard 
+                key={`custom-${selectedPreset.id}`}
+                preset={{
+                  id: selectedPreset.id || `custom-${Date.now()}`,
+                  name: selectedPreset.name || 'Custom Preset',
+                  command: selectedPreset.command,
+                  description: selectedPreset.description || 'Custom preset',
+                  // Don't pass icon as it will be handled by CustomPresetCard
+                  category: 'custom' as const
+                }}
+                disabled={disabled}
+                onApply={(e) => {
+                  e.preventDefault();
+                  if (selectedPreset.command) {
+                    onCustomCommand(selectedPreset.command);
+                  }
+                }}
+              />
+            )
           )}
         </div>
       </TabsContent>
@@ -399,26 +442,120 @@ export const FFmpegPresets: React.FC<FFmpegPresetsProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Textarea
-              placeholder="ffmpeg -i input -c:v libx264 -crf 23 -preset fast output.mp4"
-              value={customCommand}
-              onChange={(e) => setCustomCommand(e.target.value)}
-              className="min-h-[150px] font-mono text-sm"
-            />
+            <div className="space-y-4">
+              <Textarea
+                placeholder="ffmpeg -i input -c:v libx264 -crf 23 -preset fast output.mp4"
+                value={customCommand}
+                onChange={(e) => setCustomCommand(e.target.value)}
+                className="min-h-[150px] font-mono text-sm"
+              />
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="save-preset" 
+                  checked={saveAsPreset}
+                  onCheckedChange={(checked) => setSaveAsPreset(checked === true)}
+                />
+                <label
+                  htmlFor="save-preset"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Save as preset
+                </label>
+              </div>
+              
+              {saveAsPreset && (
+                <div className="space-y-2">
+                  <Label htmlFor="preset-name">Preset Name</Label>
+                  <Input
+                    id="preset-name"
+                    placeholder="My Custom Preset"
+                    value={presetName}
+                    onChange={(e) => setPresetName(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
           </CardContent>
           <CardFooter className="flex justify-end">
-            <Button 
-              onClick={handleApply}
-              disabled={!customCommand.trim()}
-              className="gap-2"
-            >
-              <Play className="h-4 w-4" />
-              Run Custom Command
-            </Button>
+            <div className="flex justify-between w-full items-center">
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={() => setIsDialogOpen(true)}
+                className="gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                Manage Presets
+              </Button>
+              <Button 
+                onClick={handleApply}
+                disabled={!customCommand.trim() || (saveAsPreset && !presetName.trim())}
+                className="gap-2"
+              >
+                <Play className="h-4 w-4" />
+                {saveAsPreset ? 'Save & Run' : 'Run Command'}
+              </Button>
+            </div>
           </CardFooter>
         </Card>
       </TabsContent>
+      
+      {/* Manage Presets Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Manage Custom Presets</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {customPresets.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">No custom presets saved yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {customPresets.map((preset) => (
+                  <div 
+                    key={preset.id}
+                    className="flex items-center justify-between p-3 border rounded-md hover:bg-accent/50 cursor-pointer"
+                    onClick={() => {
+                      setCustomCommand(preset.command);
+                      setActiveTab('custom');
+                      setIsDialogOpen(false);
+                    }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">{preset.name}</div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {preset.command}
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="flex-shrink-0 ml-2"
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        handleDeletePreset(preset.id, e);
+                      }}
+                      type="button"
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button onClick={() => setIsDialogOpen(false)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Tabs>
     </div>
   );
 };
+
+export default FFmpegPresets;
