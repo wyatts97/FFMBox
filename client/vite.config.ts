@@ -45,6 +45,17 @@ export default defineConfig(({ mode }) => {
       port: 8080,
       strictPort: true,
       open: !process.env.CI,
+      proxy: {
+        // Proxy API requests to the backend server
+        [process.env.VITE_API_BASE_URL || '/api']: {
+          target: process.env.VITE_API_BASE_URL?.startsWith('http')
+            ? process.env.VITE_API_BASE_URL
+            : 'http://localhost:5500',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(new RegExp(`^${process.env.VITE_API_BASE_URL || '/api'}`), ''),
+          secure: false,
+        },
+      },
     },
     
     // Preview server configuration

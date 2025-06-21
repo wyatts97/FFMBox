@@ -31,6 +31,10 @@ RUN apk add --no-cache \
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/ .
 
+# Copy and set up start script
+COPY start-server.sh /app/start-server.sh
+RUN chmod +x /app/start-server.sh
+
 # Create necessary directories with correct permissions
 RUN mkdir -p /app/uploads /app/output \
     && chown -R node:node /app \
@@ -66,5 +70,5 @@ USER node
 # Expose ports
 EXPOSE 5500 9229
 
-# Start the application with debugging enabled
-CMD ["node", "--inspect=0.0.0.0:9229", "server.js"]
+# Start the application using the start script
+CMD ["/app/start-server.sh"]
