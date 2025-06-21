@@ -165,7 +165,7 @@ const Index = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl sm:text-4xl font-bold mb-2">Media Flow Converter</h1>
+            <h1 className="text-2xl sm:text-4xl font-bold mb-2">FFMBox</h1>
             <p className="text-lg sm:text-xl text-muted-foreground">
               Convert your media files with ease
             </p>
