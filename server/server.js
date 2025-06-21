@@ -565,17 +565,37 @@ app.post('/api/convert', async (req, res) => {
       return res.status(404).json({ error: 'Input file not found' });
     }
 
-    activeConversions.set(conversionId, { status: 'processing' });
+    const conversion = {
+      id: conversionId,
+      input: filename,
+      output: outputFilename,
+      preset,
+      status: 'processing',
+      progress: 0,
+      startTime: new Date(),
+      endTime: null,
+      error: null
+    };
+    
+    activeConversions.set(conversionId, conversion);
+    
+    // Create the FFmpeg command
+    const command = createFFmpegCommand(inputPath, outputPath, preset, options);
+    
     command
       .on('start', (commandLine) => {
         console.log(`[${conversionId}] FFmpeg command: ${commandLine}`);
-        console.log(`[${conversionId}] Starting conversion: ${input} -> ${output}`);
+        console.log(`[${conversionId}] Starting conversion: ${filename} -> ${outputFilename}`);
+        conversion.status = 'processing';
+        activeConversions.set(conversionId, conversion);
+        broadcastProgress(conversionId, conversion);
       })
       .on('progress', (progress) => {
         const percent = Math.round(progress.percent) || 0;
         conversion.progress = percent;
         conversion.timemark = progress.timemark;
         conversion.frames = progress.frames;
+        conversion.status = 'processing';
         activeConversions.set(conversionId, conversion);
         broadcastProgress(conversionId, conversion);
       })
@@ -594,11 +614,11 @@ app.post('/api/convert', async (req, res) => {
           const result = {
             id: conversionId,
             status: 'completed',
-            input: input,
-            output: output,
+            input: filename,
+            output: outputFilename,
             size: stats?.size || 0,
             duration: duration,
-            downloadUrl: `/output/${output}`,
+            downloadUrl: `/output/${outputFilename}`,
             completedAt: endTime.toISOString()
           };
           
@@ -619,7 +639,9 @@ app.post('/api/convert', async (req, res) => {
           error: 'Conversion failed',
           message: err.message,
           code: err.code,
-          stderr: stderr
+          stderr: stderr,
+          input: filename,
+          output: outputFilename
         };
         
         // Send error update
