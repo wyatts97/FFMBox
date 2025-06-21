@@ -46,25 +46,6 @@ RUN chgrp -R 0 /app \
     && chmod -R g=u /app \
     && chmod g=u /etc/passwd
 
-# Healthcheck script (run as root to avoid permission issues)
-RUN echo '#!/bin/sh\n\
-    if wget --no-verbose --tries=1 --spider http://localhost:5500/api/health; then\
-    exit 0\
-    else\
-    # Check if we can write to the directories\
-    if [ ! -w /app/uploads ] || [ ! -w /app/output ]; then\
-    echo "Error: Cannot write to uploads or output directory" >&2\
-    exit 1\
-    fi\
-    exit 1\
-    fi\
-    ' > /healthcheck.sh \
-    && chmod +x /healthcheck.sh
-
-# Health check configuration
-HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-    CMD /healthcheck.sh
-
 # Switch to non-root user
 USER node
 
