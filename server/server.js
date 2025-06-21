@@ -709,13 +709,21 @@ app.get('/api/health', (req, res) => {
     // Get FFmpeg version info
     let ffmpegInfo = { available: false };
     try {
+      const { execSync } = require('child_process');
+      let ffmpegVersionStr = '';
+      try {
+        ffmpegVersionStr = execSync('ffmpeg -version').toString().split('\n')[0];
+      } catch (e) {
+        console.error('FFmpeg version check failed:', e);
+        ffmpegVersionStr = 'unknown';
+      }
       ffmpegInfo = {
         available: true,
-        version: ffmpeg.version()
+        version: ffmpegVersionStr
       };
-    } catch (ffmpegErr) {
-      console.error('FFmpeg version check failed:', ffmpegErr);
-      ffmpegInfo.error = ffmpegErr.message;
+    } catch (err) {
+      console.error('FFmpeg version check failed:', err);
+      ffmpegInfo.error = err.message;
     }
 
     res.status(isHealthy ? 200 : 503).json({ 
