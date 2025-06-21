@@ -1,16 +1,15 @@
 import dotenv from 'dotenv';
+dotenv.config();  // Keep only one config call
+
 import express from 'express';
 import multer from 'multer';
 import cors from 'cors';
 import ffmpeg from 'fluent-ffmpeg';
-import { WebSocketServer } from 'ws';
+import { WebSocketServer } from 'ws';  // Keep WebSocketServer import
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs-extra';
-import path from 'path';
+import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-dotenv.config();
 
 // ES modules equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
