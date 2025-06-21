@@ -33,7 +33,7 @@ export const FloatingSettings: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  Media Flow Converter is a powerful web-based tool for converting and compressing media files using FFmpeg.
+                  FFMBox is a powerful web-based tool for converting and compressing media files using FFmpeg.
                 </p>
               </CardContent>
             </Card>
