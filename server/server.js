@@ -179,13 +179,12 @@ const upload = multer({
   }
 }).array('files');
 
-// Create HTTP server
-const http = require('http');
-const server = http.createServer(app);
+// Create HTTP server and WebSocket server early
+const httpServer = require('http').createServer(app);
 
-// Initialize WebSocket server with compression
+// Initialize WebSocket server
 const wss = new WebSocket.Server({
-  server,
+  server: httpServer,
   clientTracking: true,
   perMessageDeflate: {
     zlibDeflateOptions: {
@@ -196,15 +195,15 @@ const wss = new WebSocket.Server({
     zlibInflateOptions: {
       chunkSize: 10 * 1024
     },
-    // Other options
-    clientNoContextTakeover: true, // Defaults to negotiated value
-    serverNoContextTakeover: true, // Defaults to negotiated value
-    serverMaxWindowBits: 10, // Defaults to negotiated value
-    concurrencyLimit: 10, // Limits zlib concurrency for performance
-    threshold: 1024, // Size (in bytes) below which messages should not be compressed
+    clientNoContextTakeover: true,
+    serverNoContextTakeover: true,
+    serverMaxWindowBits: 10,
+    concurrencyLimit: 10,
+    threshold: 1024
   }
 });
 
+// Track active connections and conversions
 const activeConversions = new Map();
 const activeClients = new Set();
 const RECONNECT_INTERVAL = 5000; // 5 seconds
@@ -221,129 +220,6 @@ const stats = {
 const heartbeat = (ws) => {
   ws.isAlive = true;
 };
-
-// WebSocket connection handling
-wss.on('connection', (ws, req) => {
-  const clientId = uuidv4();
-  const ip = req.socket.remoteAddress;
-  
-  // Initialize client state
-  ws.isAlive = true;
-  ws.clientId = clientId;
-  ws.ip = ip;
-  ws.subscriptions = new Set();
-  
-  // Add to active clients
-  activeClients.add(ws);
-  
-  // Update stats
-  stats.totalConnections++;
-  stats.activeConnections++;
-  
-  console.log(`[WebSocket] Client connected: ${clientId} (${ip}), Total: ${stats.activeConnections}`);
-  
-  // Handle incoming messages
-  ws.on('message', (message) => {
-    try {
-      const data = JSON.parse(message);
-      
-      // Handle heartbeat
-      if (data.type === 'ping') {
-        return ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
-      }
-      
-      // Handle subscription
-      if (data.type === 'subscribe' && data.conversionId) {
-        ws.subscriptions.add(data.conversionId);
-        console.log(`[WebSocket] Client ${clientId} subscribed to ${data.conversionId}`);
-        
-        // Send current progress if available
-        const conversion = activeConversions.get(data.conversionId);
-        if (conversion) {
-          ws.send(JSON.stringify({
-            type: 'progress',
-            conversionId: data.conversionId,
-            ...conversion
-          }));
-        }
-        
-        return;
-      }
-      
-      // Handle unsubscription
-      if (data.type === 'unsubscribe' && data.conversionId) {
-        ws.subscriptions.delete(data.conversionId);
-        console.log(`[WebSocket] Client ${clientId} unsubscribed from ${data.conversionId}`);
-        return;
-      }
-      
-      // Handle other message types
-      console.log(`[WebSocket] Received message from ${clientId}:`, data);
-      
-    } catch (err) {
-      console.error(`[WebSocket] Error processing message from ${clientId || 'unknown'}:`, err);
-      stats.errors++;
-      
-      // Send error back to client
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-          type: 'error',
-          error: 'Invalid message format',
-          message: err.message
-        }));
-      }
-    }
-  });
-  
-  // Handle pongs for heartbeat
-  ws.on('pong', () => heartbeat(ws));
-  
-  // Handle client disconnection
-  ws.on('close', () => {
-    activeClients.delete(ws);
-    stats.activeConnections--;
-    console.log(`[WebSocket] Client disconnected: ${clientId}, Remaining: ${stats.activeConnections}`);
-  });
-  
-  // Handle errors
-  ws.on('error', (err) => {
-    console.error(`[WebSocket] Error with client ${clientId}:`, err);
-    stats.errors++;
-    
-    // Try to send error to client if possible
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        type: 'error',
-        error: 'WebSocket error',
-        message: err.message
-      }));
-    }
-    
-    // Clean up
-    activeClients.delete(ws);
-    ws.terminate();
-  });
-  
-  // Send welcome message
-  ws.send(JSON.stringify({
-    type: 'welcome',
-    clientId,
-    serverTime: new Date().toISOString(),
-    message: 'Connected to FFMBox WebSocket server'
-  }));
-});
-
-// Clean up on server close
-wss.on('close', () => {
-  clearInterval(interval);
-  console.log('WebSocket server closed');
-});
-
-// Handle WebSocket server errors
-wss.on('error', (err) => {
-  console.error('WebSocket server error:', err);
-  stats.errors++;
-});
 
 /**
  * Broadcast progress to all subscribed clients
@@ -867,8 +743,117 @@ app.post('/api/cleanup', async (req, res) => {
   }
 });
 
+// Set up WebSocket heartbeat interval (30 seconds)
+const HEARTBEAT_INTERVAL = 30000; // 30 seconds
+const interval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) {
+      console.log(`[WebSocket] Terminating inactive connection: ${ws.clientId || 'unknown'}`);
+      return ws.terminate();
+    }
+    ws.isAlive = false;
+    ws.ping(() => {});
+  });
+}, HEARTBEAT_INTERVAL);
+
+// Clean up interval on server close
+wss.on('close', () => {
+  clearInterval(interval);
+  console.log('WebSocket server closed');
+});
+
+// WebSocket connection handling
+wss.on('connection', (ws, req) => {
+  const clientId = uuidv4();
+  const ip = req.socket.remoteAddress;
+  
+  // Initialize client state
+  ws.isAlive = true;
+  ws.clientId = clientId;
+  ws.ip = ip;
+  ws.subscriptions = new Set();
+  
+  // Add to active clients
+  activeClients.add(ws);
+  
+  // Update stats
+  stats.totalConnections++;
+  stats.activeConnections++;
+  
+  console.log(`[WebSocket] Client connected: ${clientId} (${ip}), Total: ${stats.activeConnections}`);
+  
+  // Handle incoming messages
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+      
+      // Handle heartbeat
+      if (data.type === 'ping') {
+        return ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+      }
+      
+      // Handle subscription
+      if (data.type === 'subscribe' && data.conversionId) {
+        ws.subscriptions.add(data.conversionId);
+        console.log(`[WebSocket] Client ${clientId} subscribed to ${data.conversionId}`);
+        
+        // Send current progress if available
+        const conversion = activeConversions.get(data.conversionId);
+        if (conversion) {
+          ws.send(JSON.stringify({
+            type: 'progress',
+            conversionId: data.conversionId,
+            ...conversion
+          }));
+        }
+        
+        return;
+      }
+      
+      // Handle unsubscription
+      if (data.type === 'unsubscribe' && data.conversionId) {
+        ws.subscriptions.delete(data.conversionId);
+        console.log(`[WebSocket] Client ${clientId} unsubscribed from ${data.conversionId}`);
+        return;
+      }
+      
+      // Handle other message types
+      console.log(`[WebSocket] Received message from ${clientId}:`, data);
+      
+    } catch (err) {
+      console.error(`[WebSocket] Error processing message from ${clientId || 'unknown'}:`, err);
+      stats.errors++;
+      
+      // Send error back to client
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'error',
+          error: 'Invalid message format',
+          message: err.message
+        }));
+      }
+    }
+  });
+  
+  // Handle pongs for heartbeat
+  ws.on('pong', () => heartbeat(ws));
+  
+  // Handle client disconnection
+  ws.on('close', () => {
+    activeClients.delete(ws);
+    stats.activeConnections--;
+    console.log(`[WebSocket] Client disconnected: ${clientId}, Remaining: ${stats.activeConnections}`);
+  });
+  
+  // Handle errors
+  ws.on('error', (err) => {
+    console.error(`[WebSocket] Error with client ${clientId}:`, err);
+    stats.errors++;
+  });
+});
+
 // Start server
-server.listen(PORT, '0.0.0.0', () => {
+httpServer.listen(PORT, '0.0.0.0', () => {
   // Log any uncaught exceptions
   process.on('uncaughtException', (err) => {
     console.error('Uncaught Exception:', err);
