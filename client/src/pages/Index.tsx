@@ -42,6 +42,7 @@ const Index = () => {
     };
   };
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const { toast } = useToast();
 
   const handleProgressUpdate = useCallback((update: ProgressUpdate) => {
@@ -64,21 +65,42 @@ const Index = () => {
 
   const handleFilesSelected = async (fileList: FileList) => {
     setIsUploading(true);
+    setUploadProgress(0);
+    
     try {
+      // Simulate upload progress for better UX
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          const newProgress = prev + Math.random() * 15;
+          return newProgress >= 90 ? 90 : newProgress;
+        });
+      }, 300);
+      
       const result = await apiService.uploadFiles(fileList);
-      setFiles(prev => [...prev, ...result.files]);
-      toast({
-        title: "Files uploaded successfully",
-        description: `${result.files.length} file(s) ready for conversion`,
-      });
+      
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      
+      // Small delay to show 100% before resetting
+      setTimeout(() => {
+        setFiles(prev => [...prev, ...result.files]);
+        setIsUploading(false);
+        
+        toast({
+          title: "Files uploaded successfully",
+          description: `${result.files.length} file(s) ready for conversion`,
+        });
+      }, 500);
+      
     } catch (error) {
+      setUploadProgress(0);
+      setIsUploading(false);
+      
       toast({
         title: "Upload failed",
         description: "Failed to upload files. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -185,14 +207,25 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl sm:text-4xl font-bold mb-2">FFMBox</h1>
-            <p className="text-lg sm:text-xl text-muted-foreground">
-              Convert your media files with ease
-            </p>
+          <div className="flex items-center gap-4">
+            <img 
+              src="/512x512.webp" 
+              alt="FFMBox Logo" 
+              className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg shadow-md transition-transform hover:scale-105"
+            />
+            <div>
+              <h1 className="text-2xl sm:text-4xl font-bold mb-2">FFMBox</h1>
+              <p className="text-lg sm:text-xl text-muted-foreground">
+                Convert your media files with ease
+              </p>
+            </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <Badge variant={connected ? "default" : "secondary"}>
+          <div className="flex items-center space-x-3">
+            <Badge 
+              variant={connected ? "default" : "secondary"}
+              className={`flex items-center ${!connected ? "animate-pulse" : ""}`}
+            >
+              <div className={`w-2 h-2 rounded-full mr-2 ${connected ? "bg-green-500" : "bg-red-500"}`}></div>
               {connected ? "Connected" : "Disconnected"}
             </Badge>
             <ThemeToggle />
@@ -201,7 +234,12 @@ const Index = () => {
 
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           <div className="xl:col-span-3 space-y-6">
-            <FileUpload onFilesSelected={handleFilesSelected} disabled={isUploading} />
+            <FileUpload 
+              onFilesSelected={handleFilesSelected} 
+              disabled={isUploading} 
+              isUploading={isUploading}
+              uploadProgress={Math.round(uploadProgress)}
+            />
             
             <FFmpegPresets 
               onPresetSelect={handlePresetConvert}

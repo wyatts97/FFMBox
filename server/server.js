@@ -252,6 +252,7 @@ if (process.env.NODE_ENV !== 'test') {
 // Create WebSocket server
 const wss = new WebSocketServer({
   server: httpServer,
+  path: '/ws', // Explicitly set the WebSocket path to match the frontend
   clientTracking: true,
   perMessageDeflate: {
     zlibDeflateOptions: {
