@@ -8,9 +8,9 @@ WORKDIR /app
 # Copy package files
 COPY app/client/package*.json ./app/client/
 
-# Install frontend dependencies
+# Install all frontend dependencies (including dev)
 RUN cd app/client && \
-    npm ci --only=production --silent
+    npm ci --silent
 
 # Copy frontend source
 COPY app/client/ ./app/client/
@@ -18,6 +18,10 @@ COPY app/client/ ./app/client/
 # Build the frontend
 RUN cd app/client && \
     npm run build
+
+# Prune dev dependencies for production
+RUN cd app/client && \
+    npm prune --production
 
 # ========================================
 # Stage 2: Build the backend (Node/Express)
