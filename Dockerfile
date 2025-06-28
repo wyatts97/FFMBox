@@ -3,85 +3,68 @@
 # ========================================
 FROM node:20.5.1-alpine AS frontend-builder
 
-WORKDIR /app
+WORKDIR /app/client
 
-# Copy package files
-COPY app/client/package*.json ./app/client/
+COPY app/client/package*.json ./
 
-# Install all frontend dependencies (including dev)
-RUN cd app/client && \ npm install --silent
+RUN npm install --silent
 
-# Copy frontend source
-COPY app/client/ ./app/client/
+COPY app/client/ ./
 
-# Build the frontend
-RUN cd app/client && npm run build
-
-# Prune dev dependencies for production
-RUN cd app/client && npm prune --production
+RUN npm run build && npm prune --production
 
 # ========================================
 # Stage 2: Build the backend (Node/Express)
 # ========================================
 FROM node:20.5.1-alpine AS backend-builder
 
-WORKDIR /app
+WORKDIR /app/server
 
-# Install system dependencies (FFmpeg)
 RUN apk add --no-cache ffmpeg
 
-# Copy package files
-COPY app/server/package*.json ./app/server/
+COPY app/server/package*.json ./
 
-# Install backend dependencies
-RUN cd app/server && \
-    npm install --only=production --silent
+RUN npm install --production --silent
+
+COPY app/server/ ./
 
 # ========================================
-# Stage 3: Production Image
+# Stage 3: Final Production Image
 # ========================================
-FROM node:20.5.1-alpine
+FROM node:20.5.1-alpine AS ffmbox
 
-# Install runtime dependencies and remove client-side FFmpeg WASM to avoid conflicts
-RUN apk add --no-cache ffmpeg && \
-    rm -rf /app/node_modules/@ffmpeg
+# Install FFmpeg (again, for runtime usage)
+RUN apk add --no-cache ffmpeg
 
+# Create app directory and user
 WORKDIR /app
-
-# Create non-root user and set up directories
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup && \
     mkdir -p /app/uploads /app/output /app/logs && \
     chown -R appuser:appgroup /app
 
-# Copy built frontend from frontend-builder
-COPY --from=frontend-builder /app/client/dist ./public
+# Copy backend and node_modules from backend-builder
+COPY --from=backend-builder /app/server /app/server
+COPY --from=backend-builder /app/server/node_modules /app/node_modules
+COPY --from=backend-builder /app/server/package*.json /app/
 
-# Copy backend from backend-builder
-COPY --from=backend-builder /app/node_modules ./node_modules
-COPY --from=backend-builder /app/package*.json ./
-COPY --from=backend-builder /app/app/server ./server
+# Copy built frontend files
+COPY --from=frontend-builder /app/client/dist /app/public
 
-# Copy necessary files
-COPY --chown=appuser:appgroup app/server/package*.json ./
-
-# Create necessary directories
-RUN mkdir -p /app/uploads /app/output /app/logs && \
-    chown -R appuser:appgroup /app/uploads /app/output /app/logs && \
-    chmod -R 775 /app/uploads /app/output /app/logs
-
-# Copy and make healthcheck executable
+# Copy scripts and give proper ownership
 COPY --chown=appuser:appgroup app/server/healthcheck.sh /app/healthcheck.sh
 RUN chmod +x /app/healthcheck.sh
 
-# Switch to non-root user
+# Set ownership and permissions again for good measure
+RUN chown -R appuser:appgroup /app && \
+    chmod -R 775 /app/uploads /app/output /app/logs
+
+# Set non-root user
 USER appuser
 
-# Health check
+# Healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget --spider -q http://localhost:3000/health || exit 1
 
-# Expose port
 EXPOSE 3000
 
-# Start the application
 CMD ["node", "server/index.js"]
