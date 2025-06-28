@@ -10,7 +10,7 @@ COPY app/client/package*.json ./app/client/
 
 # Install frontend dependencies
 RUN cd app/client && \
-    npm ci --silent
+    npm install --silent
 
 # Copy frontend source
 COPY app/client/ ./app/client/
