@@ -1,0 +1,43 @@
+{
+  "name": "ffmbox",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FFMBox - A full-stack media conversion tool with FFmpeg",
+  "workspaces": [
+    "app/client",
+    "app/server"
+  ],
+  "scripts": {
+    "start": "npm run start:server",
+    "start:server": "npm run start --workspace=server",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm run dev --workspace=server",
+    "dev:client": "npm run dev --workspace=client",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "npm run build --workspace=client",
+    "build:server": "npm run build --workspace=server",
+    "lint": "npm run lint --workspaces",
+    "test": "npm test --workspaces --if-present",
+    "clean": "rimraf node_modules app/*/node_modules app/*/dist app/*/build public"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "rimraf": "^5.0.5"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=7.0.0"
+  },
+  "keywords": [
+    "ffmpeg",
+    "media",
+    "conversion",
+    "video",
+    "audio",
+    "react",
+    "express",
+    "websockets"
+  ],
+  "author": "",
+  "license": "MIT"
+}

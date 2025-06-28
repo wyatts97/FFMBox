@@ -1,0 +1,46 @@
+services:
+  ffmbox:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ffmbox
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - UPLOAD_DIR=/app/uploads
+      - OUTPUT_DIR=/app/output
+      - LOG_DIR=/app/logs
+      - FFMPEG_PATH=/usr/bin/ffmpeg
+      - MAX_CONCURRENT_CONVERSIONS=2
+    volumes:
+      - uploads:/app/uploads
+      - output:/app/output
+      - logs:/app/logs
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1GB
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --spider -q http://localhost:3000/health && ffmpeg -version",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  uploads:
+  output:
+  logs:
