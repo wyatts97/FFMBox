@@ -18,8 +18,6 @@ FROM node:20.5.1-slim AS backend-builder
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y ffmpeg && apt-get clean
-
 COPY app/server/package*.json ./app/server/
 RUN cd app/server && npm install --only=production --silent
 COPY app/server/ ./app/server/
@@ -29,7 +27,10 @@ COPY app/server/ ./app/server/
 # =============================
 FROM node:20.5.1-slim
 
-RUN apt-get update && apt-get install -y ffmpeg && apt-get clean
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ffmpeg && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -39,8 +40,8 @@ RUN mkdir -p /app/uploads /app/output /app/logs && \
 
 COPY --from=frontend-builder /app/client/dist ./public
 COPY --from=backend-builder /app/server /app/server
-COPY --from=backend-builder /app/server/node_modules ./node_modules
-COPY --from=backend-builder /app/server/package*.json ./
+COPY --from=backend-builder /app/server/node_modules /app/server/node_modules
+COPY --from=backend-builder /app/server/package*.json /app/server/
 
 COPY --chown=appuser:appgroup app/server/healthcheck.sh /app/healthcheck.sh
 RUN chmod +x /app/healthcheck.sh && \
