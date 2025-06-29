@@ -40,7 +40,7 @@ RUN mkdir -p /app/uploads /app/output /app/logs && \
 
 COPY --from=frontend-builder /app/app/client/dist ./public
 COPY --from=backend-builder /app/server /app/server
-COPY --from=backend-builder /app/server/server/node_modules /app/server/node_modules
+COPY --from=backend-builder /app/server/node_modules /app/server/node_modules
 COPY --from=backend-builder /app/server/package*.json /app/server/
 
 COPY --chown=appuser:appgroup app/server/healthcheck.sh /app/healthcheck.sh
