@@ -9,7 +9,7 @@ COPY app/client/package*.json ./app/client/
 RUN cd app/client && npm install --silent
 
 COPY app/client/ ./app/client/
-RUN cd app/client && npm run build && npm prune --production
+RUN cd app/client && npm run build
 
 # =============================
 # Stage 2: Backend Builder
