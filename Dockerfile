@@ -38,7 +38,7 @@ RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 RUN mkdir -p /app/uploads /app/output /app/logs && \
     chown -R appuser:appgroup /app
 
-COPY --from=frontend-builder /app/client/dist ./public
+COPY --from=frontend-builder /app/app/client/dist ./public
 COPY --from=backend-builder /app/server /app/server
 COPY --from=backend-builder /app/server/server/node_modules /app/server/node_modules
 COPY --from=backend-builder /app/server/package*.json /app/server/
