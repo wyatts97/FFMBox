@@ -16,7 +16,6 @@ import { Badge } from './ui/badge';
 
 // Import FFmpeg presets
 import { PRESETS } from '../lib/ffmpeg';
-import type { CustomPreset } from '../types/presets';
 import usePresetManagement from '../hooks/usePresetManagement';
 import { 
   type AnyPreset, 
@@ -25,8 +24,9 @@ import {
   type PresetOptions, 
   type PresetState,
   isBasePreset,
-  isCustomPreset
-} from '../types/presets';
+  isCustomPreset,
+  type CustomPreset
+} from '@ffmbox/shared';
 
 // Convert FFMpeg preset to our internal preset type
 function toAppPreset(preset: FFMpegBasePreset | CustomPreset): AnyPreset {
