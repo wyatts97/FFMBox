@@ -6,7 +6,7 @@ FROM node:20.5.1-slim AS builder
 WORKDIR /app
 
 # Install pnpm
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10.12.4
 
 # Copy pnpm related files and install dependencies
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
