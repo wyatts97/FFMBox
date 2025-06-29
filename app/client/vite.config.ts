@@ -2,9 +2,6 @@ import { defineConfig, type UserConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import tailwindcss from 'tailwindcss';
-import autoprefixer from 'autoprefixer';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -14,12 +11,6 @@ const config: UserConfig = {
       jsxImportSource: '@emotion/react',
     })
   ],
-
-  css: {
-    postcss: {
-      plugins: [tailwindcss(), autoprefixer()],
-    },
-  },
 
   build: {
     outDir: 'dist',
