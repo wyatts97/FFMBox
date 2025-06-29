@@ -4,21 +4,21 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: ffmbox
+    image: ffmbox:latest
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - UPLOAD_DIR=/app/uploads
-      - OUTPUT_DIR=/app/output
-      - LOG_DIR=/app/logs
-      - FFMPEG_PATH=/usr/bin/ffmpeg
-      - MAX_CONCURRENT_CONVERSIONS=2
+      NODE_ENV: production
     volumes:
-      - uploads:/app/uploads
-      - output:/app/output
-      - logs:/app/logs
+      - ffmbox_uploads:/app/uploads
+      - ffmbox_output:/app/output
+      - ffmbox_logs:/app/logs
+
+volumes:
+  ffmbox_uploads:
+  ffmbox_output:
+  ffmbox_logs:
     deploy:
       resources:
         limits:
