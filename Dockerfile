@@ -8,7 +8,7 @@ WORKDIR /app
 # Install pnpm
 RUN npm install -g pnpm@10.12.4
 
-# Copy pnpm related files and install dependencies
+# Copy pnpm workspace files
 COPY package.json pnpm-workspace.yaml ./
 COPY app/client/package.json app/client/
 COPY app/server/package.json app/server/
@@ -16,7 +16,7 @@ COPY app/shared/package.json app/shared/
 
 RUN pnpm install
 
-# Copy all application code
+# Copy source files
 COPY app/client/ app/client/
 COPY app/server/ app/server/
 COPY app/shared/ app/shared/
@@ -26,31 +26,33 @@ RUN pnpm --filter=ffmbox-client build
 RUN pnpm --filter=ffmbox-server build
 
 # =============================
-# Stage 2: Final Runtime
+# Stage 2: Runtime
 # =============================
-FROM node:20.5.1-slim
+FROM jrottenberg/ffmpeg:4.1-ubuntu
 
-# Install ffmpeg
+# Install Node.js manually
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y curl gnupg && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    node -v && npm -v
 
 WORKDIR /app
 
-RUN addgroup --system appgroup && adduser --system --ingroup appuser
+# Setup app user and folders
+RUN groupadd --system appgroup && useradd --system --gid appgroup --create-home appuser
 RUN mkdir -p /app/uploads /app/output /app/logs && \
     chown -R appuser:appgroup /app
 
-# Copy built client assets
+# Copy frontend assets
 COPY --from=builder /app/app/client/dist ./public
 
-# Copy server production dependencies and built files
+# Copy backend code and dependencies
 COPY --from=builder /app/node_modules /app/node_modules
 COPY --from=builder /app/app/server /app/server
 COPY --from=builder /app/app/shared /app/shared
 
-# Copy healthcheck script
+# Healthcheck script
 COPY --chown=appuser:appgroup app/server/healthcheck.sh /app/healthcheck.sh
 RUN chmod +x /app/healthcheck.sh && \
     chown -R appuser:appgroup /app/uploads /app/output /app/logs && \
