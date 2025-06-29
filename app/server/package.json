@@ -6,7 +6,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon --watch . --exec 'node --experimental-modules --es-module-specifier-resolution=node server.js' || exit 1",
+    
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
@@ -24,9 +24,7 @@
     "winston-daily-rotate-file": "^4.7.1",
     "@ffmbox/shared": "workspace:^1.0.0"
   },
-  "devDependencies": {
-    "nodemon": "^3.0.2"
-  },
+  "devDependencies": {},
   "engines": {
     "node": ">=16.0.0"
   }
