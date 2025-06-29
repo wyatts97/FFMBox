@@ -18,9 +18,9 @@ FROM node:20.5.1-slim AS backend-builder
 
 WORKDIR /app
 
-COPY app/server/package*.json ./app/server/
-RUN cd app/server && npm install --only=production --silent
-COPY app/server/ ./app/server/
+COPY app/server/package*.json ./server/
+RUN cd server && npm install --only=production --silent
+COPY app/server/ ./server/
 
 # =============================
 # Stage 3: Final Runtime
