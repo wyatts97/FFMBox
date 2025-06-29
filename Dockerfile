@@ -1,32 +1,36 @@
 # =============================
-# Stage 1: Frontend Builder
+# Stage 1: Builder
 # =============================
-FROM node:20.5.1-slim AS frontend-builder
+FROM node:20.5.1-slim AS builder
 
 WORKDIR /app
 
-COPY app/client/package*.json ./app/client/
-RUN cd app/client && npm install --silent
+# Install pnpm
+RUN npm install -g pnpm
 
-COPY app/client/ ./app/client/
-RUN cd app/client && npm run build
+# Copy pnpm related files and install dependencies
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY app/client/package.json app/client/
+COPY app/server/package.json app/server/
+COPY app/shared/package.json app/shared/
+
+RUN pnpm install --frozen-lockfile
+
+# Copy all application code
+COPY app/client/ app/client/
+COPY app/server/ app/server/
+COPY app/shared/ app/shared/
+
+# Build client and server
+RUN pnpm --filter=ffmbox-client build
+RUN pnpm --filter=ffmbox-server build
 
 # =============================
-# Stage 2: Backend Builder
-# =============================
-FROM node:20.5.1-slim AS backend-builder
-
-WORKDIR /app
-
-COPY app/server/package*.json ./server/
-RUN cd server && npm install --only=production --silent
-COPY app/server/ ./server/
-
-# =============================
-# Stage 3: Final Runtime
+# Stage 2: Final Runtime
 # =============================
 FROM node:20.5.1-slim
 
+# Install ffmpeg
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ffmpeg && \
     apt-get clean && \
@@ -34,15 +38,19 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+RUN addgroup --system appgroup && adduser --system --ingroup appuser
 RUN mkdir -p /app/uploads /app/output /app/logs && \
     chown -R appuser:appgroup /app
 
-COPY --from=frontend-builder /app/app/client/dist ./public
-COPY --from=backend-builder /app/server /app/server
-COPY --from=backend-builder /app/server/node_modules /app/server/node_modules
-COPY --from=backend-builder /app/server/package*.json /app/server/
+# Copy built client assets
+COPY --from=builder /app/app/client/dist ./public
 
+# Copy server production dependencies and built files
+COPY --from=builder /app/node_modules /app/node_modules
+COPY --from=builder /app/app/server /app/server
+COPY --from=builder /app/app/shared /app/shared
+
+# Copy healthcheck script
 COPY --chown=appuser:appgroup app/server/healthcheck.sh /app/healthcheck.sh
 RUN chmod +x /app/healthcheck.sh && \
     chown -R appuser:appgroup /app/uploads /app/output /app/logs && \

@@ -25,11 +25,7 @@ services:
           cpus: "2"
           memory: 1GB
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "wget --spider -q http://localhost:3000/health && ffmpeg -version",
-        ]
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

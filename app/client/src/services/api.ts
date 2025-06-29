@@ -1,4 +1,4 @@
-import type { FileInfo, PresetOptions } from '@/types/presets';
+import type { FileInfo, PresetOptions } from '@ffmbox/shared';
 
 export interface ConversionResponse {
   conversionId: string;

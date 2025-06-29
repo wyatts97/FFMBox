@@ -1,6 +1,7 @@
 {
   "name": "ffmbox",
   "version": "1.0.0",
+  "packageManager": "pnpm@latest",
   "private": true,
   "description": "FFMBox - A full-stack media conversion tool with FFmpeg",
   "workspaces": [

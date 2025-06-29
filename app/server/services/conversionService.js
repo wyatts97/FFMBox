@@ -6,6 +6,10 @@ import { getFFmpegVersion, getFileStats } from '../utils/file.js';
 import { addHistoryItem } from '../src/routes/api.js'; // Path is correct as the src directory is copied to /app/src
 import logger from '../utils/logger.js';
 
+/**
+ * @typedef {import("@ffmbox/shared").PresetOptions} PresetOptions
+ */
+
 class ConversionService {
   constructor() {
     this.activeConversions = new Map();

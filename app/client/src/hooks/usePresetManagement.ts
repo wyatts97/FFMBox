@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import PresetService from '../services/presetService';
-import { // Changed from 'import type'
+import {
   AnyPreset,
   CustomPreset,
   type PresetOptions,
-  PresetState, // Changed from 'type PresetState'
-  isValidCustomPreset 
-} from '../types/presets';
+  PresetState,
+  isValidCustomPreset
+} from '@ffmbox/shared';
 
 const usePresetManagement = (initialPresets: AnyPreset[] = []) => {
   const [state, setState] = useState<PresetState>({
