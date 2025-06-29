@@ -9,12 +9,12 @@ WORKDIR /app
 RUN npm install -g pnpm@10.12.4
 
 # Copy pnpm related files and install dependencies
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-workspace.yaml ./
 COPY app/client/package.json app/client/
 COPY app/server/package.json app/server/
 COPY app/shared/package.json app/shared/
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 
 # Copy all application code
 COPY app/client/ app/client/
