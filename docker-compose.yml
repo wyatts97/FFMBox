@@ -14,11 +14,6 @@ services:
       - ffmbox_uploads:/app/uploads
       - ffmbox_output:/app/output
       - ffmbox_logs:/app/logs
-
-volumes:
-  ffmbox_uploads:
-  ffmbox_output:
-  ffmbox_logs:
     deploy:
       resources:
         limits:
