@@ -56,7 +56,8 @@ COPY --from=builder /app/app/server /app/server
 COPY --from=builder /app/app/shared /app/shared
 
 # Copy server's package.json and lockfile for production install
-COPY app/server/package.json app/server/pnpm-lock.yaml ./server/
+COPY app/server/package.json ./server/
+COPY pnpm-lock.yaml ./
 
 # Install server dependencies only
 RUN cd server && pnpm install --prod
