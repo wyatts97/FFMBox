@@ -11,7 +11,7 @@
     "build": "pnpm --filter=ffmbox-client build && pnpm --filter=ffmbox-server build",
     "lint": "pnpm --filter=./app/* lint",
     "test": "pnpm --filter=./app/* test",
-    "clean": "rimraf node_modules pnpm-lock.yaml app/*/dist app/*/build public"
+    "clean": "npx rimraf --glob node_modules pnpm-lock.yaml \"app/*/dist\" \"app/*/build\""
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

@@ -6,6 +6,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "build": "echo \"No build specified\" && exit 0",
     
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -24,7 +25,9 @@
     "winston-daily-rotate-file": "^4.7.1",
     "@ffmbox/shared": "workspace:^1.0.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  },
   "engines": {
     "node": ">=16.0.0"
   }
