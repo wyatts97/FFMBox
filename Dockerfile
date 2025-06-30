@@ -55,7 +55,7 @@ COPY --from=builder /app/app/client/dist ./public
 COPY --from=builder /app/app/server /app/server
 COPY --from=builder /app/app/shared /app/shared
 
-# Copy server's package.json and lockfile for production install
+# Copy server's package
 COPY app/server/package.json ./server/
 COPY pnpm-lock.yaml ./
 
