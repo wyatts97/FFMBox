@@ -8,10 +8,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const outputFormatContainerImage = document.getElementById('outputFormatContainerImage');
   const formatOptionsSection = document.getElementById('format-options-section');
   const formatOptionsDiv = document.getElementById('format-options');
+  const advancedOptionsSection = document.getElementById('advanced-options');
   const customCommand = document.getElementById('customCommand');
   const convertButton = document.getElementById('convertButton');
-  const progressBar = document.getElementById('progressBar');
-  const progressText = document.getElementById('progressText');
+  const conversionProgressContainer = document.getElementById('conversion-progress-container');
+  const batchCounter = document.getElementById('batch-counter');
+  const conversionProgressBar = document.getElementById('conversion-progress-bar');
   const downloadManager = document.getElementById('download-manager');
   const downloadTable = document.getElementById('download-table').getElementsByTagName('tbody')[0];
   const downloadAllButton = document.getElementById('downloadAllButton');
@@ -27,11 +29,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const autoDownloadCheckbox = document.getElementById('auto-download');
   const toastContainer = document.getElementById('toast-container');
 
+  const tooltip = document.createElement('div');
+  tooltip.className = 'dynamic-tooltip';
+  document.body.appendChild(tooltip);
+
   let selectedFiles = [];
   let outputFormats = { video: [], audio: [], image: [] };
   let selectedOutputFormat = null;
   let downloads = JSON.parse(localStorage.getItem('downloads')) || []; // Store download data
   let currentSort = { column: 'name', direction: 'asc' };
+  let userSelections = {}; // New object to store user's selections
 
   const ffmpegCommands = [
     '-c:v libx264',
@@ -77,6 +84,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 5000);
   };
 
+  // Tooltip handling
+  document.addEventListener('mouseover', (e) => {
+    const target = e.target.closest('[data-tooltip]');
+    if (target) {
+      const tooltipText = target.dataset.tooltip;
+      tooltip.textContent = tooltipText;
+      tooltip.classList.add('show'); // Make visible first to get dimensions
+
+      const rect = target.getBoundingClientRect();
+      // Adjust position to ensure it's within viewport if it goes off screen
+      let left = rect.left + rect.width / 2 - tooltip.offsetWidth / 2;
+      let top = rect.top - tooltip.offsetHeight - 10;
+
+      // Keep tooltip within viewport horizontally
+      if (left < 0) {
+        left = 0;
+      } else if (left + tooltip.offsetWidth > window.innerWidth) {
+        left = window.innerWidth - tooltip.offsetWidth;
+      }
+
+      // Keep tooltip within viewport vertically (if it goes above top, place below)
+      if (top < 0) {
+        top = rect.bottom + 10; // Place below the element
+      }
+
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
+    }
+  });
+
+  document.addEventListener('mouseout', (e) => {
+    if (e.target.closest('[data-tooltip]')) {
+      tooltip.classList.remove('show');
+    }
+  });
+
   const setTheme = (theme) => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
@@ -106,6 +149,23 @@ document.addEventListener('DOMContentLoaded', () => {
       outputFormats.video = allFormats.filter(f => f.type === 'video');
       outputFormats.audio = allFormats.filter(f => f.type === 'audio');
       outputFormats.image = allFormats.filter(f => f.type === 'image');
+
+      // Initialize userSelections with default values from fetched outputFormats
+      allFormats.forEach(format => {
+        if (format.configurableOptions) {
+          format.configurableOptions.forEach(option => {
+            if (userSelections[option.id] === undefined) { // Only set if not already set by user
+              userSelections[option.id] = option.default;
+            }
+          });
+        }
+      });
+
+      // Set a default selected format (e.g., the first video format)
+      if (outputFormats.video.length > 0) {
+        selectedOutputFormat = JSON.parse(JSON.stringify(outputFormats.video[0]));
+        renderFormatOptions(selectedOutputFormat);
+      }
       renderOutputFormatCards();
       showTab('video'); // Show video tab by default
     } catch (error) {
@@ -140,6 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
     card.className = 'output-format-card';
     card.dataset.extension = format.extension;
     card.dataset.type = format.type;
+    card.dataset.tooltip = format.description; // Add data-tooltip to the card
     
     const title = document.createElement('h3');
     title.textContent = format.name;
@@ -154,18 +215,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     card.appendChild(icon);
 
-    const tooltip = document.createElement('span');
-    tooltip.className = 'tooltip';
-    tooltip.dataset.tooltip = format.description;
-    tooltip.innerHTML = '<i class="fas fa-circle-question"></i>';
-    title.appendChild(tooltip);
+    const tooltipSpan = document.createElement('span');
+    tooltipSpan.className = 'tooltip';
+    tooltipSpan.dataset.tooltip = format.description;
+    tooltipSpan.innerHTML = '<i class="fas fa-circle-question"></i>';
+    title.appendChild(tooltipSpan);
     
     card.appendChild(title);
     return card;
   };
 
-  const handleFileSelection = (files) => {
-    selectedFiles = Array.from(files);
+  const addFiles = (files) => {
+    const newFiles = Array.from(files).filter(file => 
+      !selectedFiles.some(existingFile => existingFile.name === file.name && existingFile.size === file.size)
+    );
+
+    if (newFiles.length > 0) {
+      selectedFiles.push(...newFiles);
+      renderFiles();
+    }
+  };
+
+  const renderFiles = () => {
     selectedFilesPreview.innerHTML = ''; // Clear previous previews
 
     if (selectedFiles.length > 0) {
@@ -180,6 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
       fileLabelText.textContent = defaultFileLabelText;
       convertButton.disabled = true;
     }
+    setUIState(false); // Update UI state after rendering files
   };
 
   const createThumbnailCard = async (file, index) => {
@@ -261,9 +333,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const statusElement = fileCard.querySelector('.file-status');
       
       statusElement.textContent = 'Converting...';
-      progressBar.hidden = false;
-      progressBar.value = 0;
-      progressText.textContent = `Starting conversion for ${file.name}...`;
+      conversionProgressContainer.classList.remove('hidden');
+      if (selectedFiles.length > 1) {
+        batchCounter.textContent = `Converting ${i + 1}/${selectedFiles.length}`;
+      }
+      conversionProgressBar.value = 0;
 
       const formData = new FormData();
       formData.append('inputFile', file);
@@ -273,15 +347,19 @@ document.addEventListener('DOMContentLoaded', () => {
       if (customCommandValue) {
         formData.append('customCommand', customCommandValue);
       } else if (selectedOutputFormat) {
+        console.log(`convertFile: userSelections.speedPreset before formData: ${userSelections.speedPreset}`);
         formData.append('outputExtension', selectedOutputFormat.extension);
         formData.append('outputType', selectedOutputFormat.type);
         selectedOutputFormat.configurableOptions.forEach(option => {
           const inputElement = document.getElementById(option.id);
           if (inputElement) {
             if (option.type === 'checkbox') {
-              formData.append(option.id, inputElement.checked);
+              formData.append(option.id, userSelections[option.id]);
             } else {
-              formData.append(option.id, inputElement.value);
+              if (option.id === 'speedPreset') {
+                console.log(`Final check: Appending speedPreset with value: ${userSelections[option.id]}`);
+              }
+              formData.append(option.id, userSelections[option.id]);
             }
           }
         });
@@ -302,15 +380,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const eventSource = new EventSource(`/progress/${jobId}`);
         eventSource.onmessage = (event) => {
           const data = JSON.parse(event.data);
-          progressBar.value = data.progress;
-          progressText.textContent = `${data.status}: ${Math.round(data.progress)}%`;
+          conversionProgressBar.value = data.progress;
 
           if (data.status === 'completed') {
             statusElement.textContent = 'Done';
             statusElement.style.color = 'green';
             showToast(`Conversion of ${file.name} completed successfully!`, 'success');
-            progressBar.hidden = true;
-            progressText.textContent = '';
+            if (i === selectedFiles.length - 1) {
+              conversionProgressContainer.classList.add('hidden');
+            }
 
             const newDownload = {
               jobId: jobId,
@@ -336,8 +414,7 @@ document.addEventListener('DOMContentLoaded', () => {
             statusElement.textContent = 'Error';
             statusElement.style.color = 'red';
             showToast(`Error converting ${file.name}: ${data.error}`, 'error');
-            progressBar.hidden = true;
-            progressText.textContent = `Error converting ${file.name}: ${data.error}`;
+            conversionProgressContainer.classList.add('hidden');
             eventSource.close();
           }
         };
@@ -450,7 +527,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  fileInput.addEventListener('change', (e) => handleFileSelection(e.target.files));
+  fileInput.addEventListener('change', (e) => addFiles(e.target.files));
   fileLabel.addEventListener('dragover', (e) => {
     e.preventDefault();
     fileLabel.classList.add('dragover');
@@ -460,7 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     fileLabel.classList.remove('dragover');
     if (e.dataTransfer.files.length) {
-      handleFileSelection(e.dataTransfer.files); // Handle multiple files on drop
+      addFiles(e.dataTransfer.files); // Handle multiple files on drop
     }
   });
 
@@ -468,7 +545,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target.classList.contains('remove-file')) {
       const indexToRemove = parseInt(e.target.dataset.index);
       selectedFiles.splice(indexToRemove, 1);
-      handleFileSelection(selectedFiles); // Re-render the file list
+      renderFiles(); // Re-render the file list
     }
   });
 
@@ -485,7 +562,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const selectedType = card.dataset.type;
       
       // Find the selected format across all categories
-      selectedOutputFormat = Object.values(outputFormats).flat().find(format => format.extension === selectedExtension && format.type === selectedType);
+      selectedOutputFormat = JSON.parse(JSON.stringify(Object.values(outputFormats).flat().find(format => format.extension === selectedExtension && format.type === selectedType)));
+      // Update userSelections with the defaults of the newly selected format, but only if not already set by user
+      if (selectedOutputFormat && selectedOutputFormat.configurableOptions) {
+        selectedOutputFormat.configurableOptions.forEach(option => {
+          if (userSelections[option.id] === undefined) {
+            userSelections[option.id] = option.default;
+          }
+        });
+      }
       
       renderFormatOptions(selectedOutputFormat);
     });
@@ -524,6 +609,32 @@ document.addEventListener('DOMContentLoaded', () => {
         content.classList.add('active');
       }
     });
+
+    // Set selectedOutputFormat and manage Advanced Options visibility based on tabType
+    if (tabType === 'video') {
+      selectedOutputFormat = JSON.parse(JSON.stringify(outputFormats.video[0])); // Select first video format by default
+      advancedOptionsSection.hidden = false;
+    } else if (tabType === 'audio') {
+      selectedOutputFormat = JSON.parse(JSON.stringify(outputFormats.audio[0])); // Select first audio format by default
+      advancedOptionsSection.hidden = true;
+    } else if (tabType === 'image') {
+      selectedOutputFormat = JSON.parse(JSON.stringify(outputFormats.image[0])); // Select first image format by default
+      advancedOptionsSection.hidden = true;
+    }
+
+    // Update userSelections with the defaults of the newly selected format, but only if not already set by user
+    if (selectedOutputFormat && selectedOutputFormat.configurableOptions) {
+      selectedOutputFormat.configurableOptions.forEach(option => {
+        if (userSelections[option.id] === undefined) {
+          userSelections[option.id] = option.default;
+        }
+      });
+    }
+
+    // Render options for the newly selected default format
+    if (selectedOutputFormat) {
+      renderFormatOptions(selectedOutputFormat);
+    }
   };
 
   // Tab switching logic for format types
@@ -535,9 +646,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const renderFormatOptions = (format) => {
     formatOptionsDiv.innerHTML = '';
-    formatOptionsSection.hidden = false;
 
-    if (format && format.configurableOptions) {
+    if (format && format.configurableOptions && format.configurableOptions.length > 0) {
+      formatOptionsSection.hidden = false;
       format.configurableOptions.forEach(option => {
         const selectGroup = document.createElement('div');
         selectGroup.className = 'select-group';
@@ -546,11 +657,7 @@ document.addEventListener('DOMContentLoaded', () => {
         label.setAttribute('for', option.id);
         label.textContent = option.label;
         if (option.tooltip) {
-          const tooltipSpan = document.createElement('span');
-          tooltipSpan.className = 'tooltip';
-          tooltipSpan.dataset.tooltip = option.tooltip;
-          tooltipSpan.innerHTML = '<i class="fas fa-circle-question"></i>';
-          label.appendChild(tooltipSpan);
+          label.dataset.tooltip = option.tooltip; // Add data-tooltip to the label
         }
         selectGroup.appendChild(label);
 
@@ -564,7 +671,16 @@ document.addEventListener('DOMContentLoaded', () => {
               opt.textContent = val;
               inputElement.appendChild(opt);
             });
-            inputElement.value = option.default;
+            const savedValue = userSelections[option.id];
+            inputElement.value = userSelections[option.id] !== undefined ? userSelections[option.id] : option.default;
+            if (option.id === 'speedPreset') {
+              console.log(`renderFormatOptions: Initial speedPreset DOM value: ${inputElement.value}`);
+            }
+            // Add event listener to update userSelections and the DOM element's value
+            inputElement.addEventListener('change', (e) => {
+              userSelections[option.id] = e.target.value; // Update userSelections
+              inputElement.value = e.target.value; // Explicitly update the DOM element's value
+            });
             break;
           case 'range':
             inputElement = document.createElement('input');
@@ -581,9 +697,21 @@ document.addEventListener('DOMContentLoaded', () => {
             selectGroup.appendChild(rangeValueSpan);
             break;
           case 'checkbox':
+            selectGroup.classList.add('checkbox-select-group'); // Add new class for styling
             inputElement = document.createElement('input');
             inputElement.type = 'checkbox';
             inputElement.checked = option.default;
+            // For checkboxes, the label should wrap the input for better accessibility and styling
+            const checkboxLabel = document.createElement('label');
+            checkboxLabel.setAttribute('for', option.id);
+            checkboxLabel.textContent = option.label;
+            if (option.tooltip) {
+              checkboxLabel.dataset.tooltip = option.tooltip;
+            }
+            selectGroup.appendChild(checkboxLabel);
+            selectGroup.appendChild(inputElement);
+            // Clear the original label as it's now part of checkboxLabel
+            label.remove();
             break;
           case 'number':
             inputElement = document.createElement('input');
@@ -606,6 +734,8 @@ document.addEventListener('DOMContentLoaded', () => {
         selectGroup.appendChild(inputElement);
         formatOptionsDiv.appendChild(selectGroup);
       });
+    } else {
+      formatOptionsSection.hidden = true;
     }
   };
 
@@ -714,11 +844,7 @@ document.addEventListener('DOMContentLoaded', () => {
   autoDownloadCheckbox.checked = localStorage.getItem('autoDownload') === 'true';
   renderDownloadTable(); // Initial render of download table
 
-  // Add tooltip to custom command section
-  const customCommandTooltip = document.querySelector('.custom-command-section .tooltip');
-  customCommandTooltip.addEventListener('click', () => {
-    window.open('https://ffmpeg.org/ffmpeg.html', '_blank');
-  });
+  
 
   // Collapsible sections logic
   document.querySelectorAll('.collapsible-header').forEach(header => {

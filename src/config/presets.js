@@ -20,7 +20,8 @@ const outputFormats = [
     configurableOptions: [
       { id: "resolution", label: "Resolution", type: "select", values: ["Original", "480p", "720p", "1080p"], default: "720p" },
       { id: "videoBitrate", label: "Video Bitrate (Mbps)", type: "number", default: 2, tooltip: "Sets the target video bitrate." },
-      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 128, tooltip: "Sets the target audio bitrate." }
+      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 128, tooltip: "Sets the target audio bitrate." },
+      { id: "speedPreset", label: "Encoding Speed", type: "select", values: ["ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"], default: "medium", tooltip: "Affects encoding speed and compression efficiency." }
     ]
   },
   {
@@ -31,7 +32,8 @@ const outputFormats = [
     configurableOptions: [
       { id: "resolution", label: "Resolution", type: "select", values: ["Original", "480p", "720p", "1080p"], default: "720p" },
       { id: "videoQuality", label: "Video Quality (CRF)", type: "range", min: 18, max: 28, step: 1, default: 23 },
-      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 128 }
+      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 128 },
+      { id: "speedPreset", label: "Encoding Speed", type: "select", values: ["ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"], default: "medium", tooltip: "Affects encoding speed and compression efficiency." }
     ]
   },
   {
@@ -42,7 +44,8 @@ const outputFormats = [
     configurableOptions: [
       { id: "resolution", label: "Resolution", type: "select", values: ["Original", "480p", "720p", "1080p"], default: "720p" },
       { id: "videoQuality", label: "Video Quality (CRF)", type: "range", min: 18, max: 28, step: 1, default: 23 },
-      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 128 }
+      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 128 },
+      { id: "speedPreset", label: "Encoding Speed", type: "select", values: ["ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"], default: "medium", tooltip: "Affects encoding speed and compression efficiency." }
     ]
   },
   
@@ -54,7 +57,8 @@ const outputFormats = [
     configurableOptions: [
       { id: "resolution", label: "Resolution", type: "select", values: ["Original", "480p", "720p", "1080p"], default: "720p" },
       { id: "videoQuality", label: "Video Quality (CRF)", type: "range", min: 18, max: 28, step: 1, default: 23 },
-      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 128 }
+      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 128 },
+      { id: "speedPreset", label: "Encoding Speed", type: "select", values: ["ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"], default: "medium", tooltip: "Affects encoding speed and compression efficiency." }
     ]
   },
   {
@@ -65,7 +69,8 @@ const outputFormats = [
     configurableOptions: [
       { id: "resolution", label: "Resolution", type: "select", values: ["Original", "480p", "720p", "1080p"], default: "720p" },
       { id: "videoQuality", label: "Video Quality (CRF)", type: "range", min: 18, max: 28, step: 1, default: 23 },
-      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 128 }
+      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 128 },
+      { id: "speedPreset", label: "Encoding Speed", type: "select", values: ["ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"], default: "medium", tooltip: "Affects encoding speed and compression efficiency." }
     ]
   },
   {
@@ -76,7 +81,8 @@ const outputFormats = [
     configurableOptions: [
       { id: "resolution", label: "Resolution", type: "select", values: ["Original", "480p", "720p", "1080p"], default: "720p" },
       { id: "videoQuality", label: "Video Quality (CRF)", type: "range", min: 18, max: 28, step: 1, default: 23 },
-      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 128 }
+      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 128 },
+      { id: "speedPreset", label: "Encoding Speed", type: "select", values: ["ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"], default: "medium", tooltip: "Affects encoding speed and compression efficiency." }
     ]
   },
   {
@@ -87,7 +93,8 @@ const outputFormats = [
     configurableOptions: [
       { id: "resolution", label: "Resolution", type: "select", values: ["Original", "176x144", "320x240"], default: "176x144" },
       { id: "videoQuality", label: "Video Quality (CRF)", type: "range", min: 18, max: 28, step: 1, default: 23 },
-      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 64 }
+      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 64 },
+      { id: "speedPreset", label: "Encoding Speed", type: "select", values: ["ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"], default: "medium", tooltip: "Affects encoding speed and compression efficiency." }
     ]
   },
   {
@@ -99,7 +106,8 @@ const outputFormats = [
       { id: "fps", label: "Frames Per Second", type: "number", default: 15, tooltip: "Higher FPS means smoother animation but larger file size." },
       { id: "startTime", label: "Start Time (HH:MM:SS)", type: "text", default: "00:00:00", tooltip: "Start conversion from this timestamp." },
       { id: "endTime", label: "End Time (HH:MM:SS)", type: "text", default: "00:00:05", tooltip: "End conversion at this timestamp." },
-      { id: "resolution", label: "Resolution", type: "select", values: ["Original", "320p", "480p"], default: "320p" }
+      { id: "resolution", label: "Resolution", type: "select", values: ["Original", "320p", "480p"], default: "320p" },
+      { id: "speedPreset", label: "Encoding Speed", type: "select", values: ["ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"], default: "medium", tooltip: "Affects encoding speed and compression efficiency." }
     ]
   },
 
@@ -215,7 +223,7 @@ const outputFormats = [
     description: "Convert to WebP format.",
     configurableOptions: [
       { id: "quality", label: "Quality (%)", type: "range", min: 1, max: 100, step: 1, default: 75, tooltip: "WebP quality. Lower values mean more compression and smaller file size." },
-      { id: "lossless", label: "Lossless", type: "checkbox", default: false, tooltip: "Enable lossless compression." }
+      { id: "lossless", label: "Lossless", type: "checkbox", default: false, tooltip: "Enable lossless compression. This will result in larger file sizes but no loss of image quality." }
     ]
   },
   {

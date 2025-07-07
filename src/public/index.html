@@ -94,7 +94,7 @@
                     <option value="veryfast">Veryfast</option>
                     <option value="faster">Faster</option>
                     <option value="fast">Fast</option>
-                    <option value="medium" selected>Medium</option>
+                    <option value="medium">Medium</option>
                     <option value="slow">Slow</option>
                     <option value="slower">Slower</option>
                     <option value="veryslow">Veryslow</option>
@@ -120,7 +120,7 @@
             </section>
     
             <section class="custom-command-section">
-              <label for="customCommand">Or Enter Custom FFMPEG Command <span class="tooltip" data-tooltip="Enter any custom FFmpeg arguments here. This will override all other settings. For a full list of commands, see the official FFmpeg documentation."><i class="fas fa-circle-question"></i></span></label>
+              <label for="customCommand" data-tooltip="Enter any custom FFmpeg arguments here. This will override all other settings. For a full list of commands, see the official FFmpeg documentation.">Or Enter Custom FFMPEG Command</label>
               <textarea id="customCommand" placeholder="-c:v libx264 -preset slow -crf 22 -c:a aac -b:a 192k"></textarea>
               <div id="command-suggestions"></div>
               <small>Note: This will override the preset selection.</small>
@@ -128,13 +128,7 @@
             
             
             <div class="actions">
-              <button id="convertButton" disabled>Convert</button>
             </div>
-    
-            <section class="progress-section">
-              <progress id="progressBar" value="0" max="100" hidden></progress>
-              <span id="progressText"></span>
-            </section>
           </div>
         </div>
       </main>
@@ -193,4 +187,14 @@
   <script type="module" src="app.js"></script>
 </body>
 </html>
-<div id="toast-container"></div>
+  <div id="toast-container"></div>
+
+  <div id="floating-convert-button-container">
+    <div id="conversion-progress-container" class="hidden">
+      <span id="batch-counter"></span>
+      <progress id="conversion-progress-bar" value="0" max="100"></progress>
+    </div>
+    <button id="convertButton" class="floating-convert-button" disabled>
+      Convert
+    </button>
+  </div>
