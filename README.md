@@ -48,7 +48,7 @@ FFMBox is a powerful, self-hosted web application for converting and compressing
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/yourusername/FFMBox.git
+   git clone https://github.com/wyatts97/FFMBox
    cd FFMBox
    ```
 
