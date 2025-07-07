@@ -12,9 +12,9 @@ FFMBox is a powerful, self-hosted web application for converting and compressing
 
 ### Media Conversion
 
-- **Video Conversion**: Convert between various video formats (MP4, WebM, etc.) with customizable quality settings
-- **Audio Extraction & Conversion**: Extract audio from video files or convert between audio formats (MP3, AAC, OGG, etc.)
-- **Image Processing**: Convert and optimize images with various presets
+- **Video Conversion**: Convert between various video formats including MP4, WebM, AVI, MOV, MKV, FLV, 3GP, and GIF with customizable quality settings
+- **Audio Extraction & Conversion**: Extract audio from video files or convert between audio formats including MP3, AAC, OGG, WAV, FLAC, M4A, WMA, and OPUS
+- **Image Processing**: Convert and optimize images in formats like JPG, PNG, WEBP, BMP, TIFF, and SVG
 - **Batch Processing**: Convert multiple files simultaneously
 
 ### User Experience
