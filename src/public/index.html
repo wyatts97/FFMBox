@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-version="1.0.0" data-accent-color="red">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FFMBox</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+  <div class="main-wrapper">
+    <aside class="main-sidebar">
+      <div class="sidebar-header">
+        <h1 class="app-title">FFMBox</h1>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-tab="converter"><i class="fas fa-tools"></i> Converter</a>
+        <a href="#" class="nav-item" data-tab="downloads"><i class="fas fa-download"></i> Downloads</a>
+      </nav>
+      <div class="sidebar-footer">
+        <label class="theme-toggle" for="themeToggle">
+          <input type="checkbox" id="themeToggle" />
+          <span class="slider">
+            <i class="fas fa-moon theme-icon moon-icon"></i>
+            <i class="fas fa-sun theme-icon sun-icon"></i>
+          </span>
+        </label>
+        <button id="settings-button"><i class="fas fa-cog"></i></button>
+      </div>
+    </aside>
+
+    <div class="content-wrapper">
+      <main id="converter-tab" class="tab-content active">
+        <div class="converter-layout">
+          <div class="converter-main">
+            <section class="file-upload-section">
+              <label for="fileInput" class="file-label">
+                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                <span id="file-label-text">Select or Drag & Drop your media file here</span>
+              </label>
+              <input type="file" id="fileInput" multiple />
+              <div id="selected-files-preview" class="selected-files-preview"></div>
+              <small>Supports all file types that FFMPEG supports.</small>
+            </section>
+
+            <section class="preset-selection">
+              <div class="select-group">
+                <label>Media Type</label>
+                <div class="segmented-control" id="mediaTypeControl">
+                  <button class="segment-button active" data-value="video">Video</button>
+                  <button class="segment-button" data-value="audio">Audio</button>
+                  <button class="segment-button" data-value="image">Image</button>
+                </div>
+              </div>
+              <div class="select-group">
+                <label for="presetSelect">Choose Preset</label>
+                <div id="presetContainer" class="preset-container"></div>
+              </div>
+            </section>
+    
+            <section class="collapsible-section">
+              <h3 class="collapsible-header expanded" data-target="advanced-options">
+                Advanced Options <i class="fas fa-chevron-down"></i>
+              </h3>
+              <div id="advanced-options" class="collapsible-content">
+                <div class="select-group">
+                  <label for="videoBitrate">Video Bitrate (kbps) <span class="tooltip" data-tooltip="Sets the target video bitrate. Higher values mean better quality and larger file sizes. (e.g., 2000)"><i class="fas fa-circle-question"></i></span></label>
+                  <input type="number" id="videoBitrate" placeholder="e.g., 2000" />
+                </div>
+                <div class="select-group">
+                  <label for="frameRate">Frame Rate (fps) <span class="tooltip" data-tooltip="Sets the number of frames per second. Higher values create smoother motion. (e.g., 30)"><i class="fas fa-circle-question"></i></span></label>
+                  <input type="number" id="frameRate" placeholder="e.g., 30" />
+                </div>
+                <div class="select-group">
+                  <label for="audioBitrate">Audio Bitrate (kbps) <span class="tooltip" data-tooltip="Sets the target audio bitrate. Higher values mean better audio quality. (e.g., 128)"><i class="fas fa-circle-question"></i></span></label>
+                  <input type="number" id="audioBitrate" placeholder="e.g., 128" />
+                </div>
+                <div class="select-group">
+                  <label for="speedPreset">Speed Preset <span class="tooltip" data-tooltip="Affects the encoding speed and compression efficiency. Slower presets provide better compression."><i class="fas fa-circle-question"></i></span></label>
+                  <select id="speedPreset">
+                    <option value="ultrafast">Ultrafast</option>
+                    <option value="superfast">Superfast</option>
+                    <option value="veryfast">Veryfast</option>
+                    <option value="faster">Faster</option>
+                    <option value="fast">Fast</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="slow">Slow</option>
+                    <option value="slower">Slower</option>
+                    <option value="veryslow">Veryslow</option>
+                  </select>
+                </div>
+              </div>
+            </section>
+    
+            <section class="collapsible-section">
+              <h3 class="collapsible-header expanded" data-target="metadata-section">
+                Metadata <i class="fas fa-chevron-down"></i>
+              </h3>
+              <div id="metadata-section" class="collapsible-content">
+                <div class="select-group">
+                  <label for="metaTitle">Title</label>
+                  <input type="text" id="metaTitle" placeholder="e.g., My Awesome Video" />
+                </div>
+                <div class="select-group">
+                  <label for="metaAuthor">Author</label>
+                  <input type="text" id="metaAuthor" placeholder="e.g., John Doe" />
+                </div>
+              </div>
+            </section>
+    
+            <section class="custom-command-section">
+              <label for="customCommand">Or Enter Custom FFMPEG Command <span class="tooltip" data-tooltip="Enter any custom FFmpeg arguments here. This will override all other settings. For a full list of commands, see the official FFmpeg documentation."><i class="fas fa-circle-question"></i></span></label>
+              <textarea id="customCommand" placeholder="-c:v libx264 -preset slow -crf 22 -c:a aac -b:a 192k"></textarea>
+              <div id="command-suggestions"></div>
+              <small>Note: This will override the preset selection.</small>
+            </section>
+            
+            
+            <div class="actions">
+              <button id="convertButton" disabled>Convert</button>
+            </div>
+    
+            <section class="progress-section">
+              <progress id="progressBar" value="0" max="100" hidden></progress>
+              <span id="progressText"></span>
+            </section>
+          </div>
+        </div>
+      </main>
+
+      <main id="downloads-tab" class="tab-content" hidden>
+        <div class="download-modal-container">
+          <section id="download-manager" class="download-manager-section">
+            <div class="download-all-button-container">
+              <button id="downloadAllButton" hidden>Download All</button>
+            </div>
+            <div class="download-manager-controls">
+              <input type="text" id="download-search" placeholder="Search downloads..." />
+            </div>
+            <table id="download-table">
+              <thead>
+                <tr>
+                  <th data-sort="name">Name <i class="fas fa-sort"></i></th>
+                  <th data-sort="originalSize">Original Size <i class="fas fa-sort"></i></th>
+                  <th data-sort="convertedSize">Converted Size <i class="fas fa-sort"></i></th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </section>
+          <p id="no-downloads-message" class="no-downloads-message">Nothing here yet...</p>
+        </div>
+      </main>
+    </div>
+
+    <div id="sidebar-overlay"></div>
+    <div id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <h2>Settings</h2>
+        <button id="close-sidebar">×</button>
+      </div>
+      <div class="sidebar-content">
+        <div class="setting">
+          <label for="default-download-dir">Default Download Directory</label>
+          <input type="text" id="default-download-dir" placeholder="e.g., C:\Users\YourUser\Downloads" />
+        </div>
+        <div class="setting setting-toggle">
+          <label for="auto-download">Automatically download files</label>
+          <label class="switch">
+            <input type="checkbox" id="auto-download">
+            <span class="slider round"></span>
+          </label>
+        </div>
+        <div class="app-info">
+          <h3>About FFMBox</h3>
+          <p>Version: 1.0.0</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
+<div id="toast-container"></div>
