@@ -1,6 +1,6 @@
 <div align="center">
 
-![FFMBox Logo](src/public/512x512.webp)
+<img src="src/public/512x512.webp" alt="FFMBox Logo" width="150" />
 
 # FFMBox - Self-Hosted Media Converter
 
