@@ -137,4 +137,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-💡 **Tip**: For best performance, ensure FFmpeg is compiled with hardware acceleration support for your system."# FFMBox" 
+💡 **Tip**: For best performance, ensure FFmpeg is compiled with hardware acceleration support for your system.
