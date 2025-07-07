@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    environment:
+      - FFMPEG_PATH=/usr/bin/ffmpeg
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./temp_uploads:/usr/src/app/temp_uploads
+      - ./temp_outputs:/usr/src/app/temp_outputs
