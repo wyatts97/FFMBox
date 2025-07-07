@@ -112,15 +112,6 @@ TEMP_OUTPUT_DIR=./temp_outputs
 
 You can modify or add presets in `src/config/presets.js` to include your frequently used conversion settings.
 
-## 📦 Deployment
-
-### PM2 (Production)
-
-```bash
-npm install -g pm2
-pm2 start src/server.js --name "ffmbox"
-```
-
 ## 🤝 Contributing
 
 Contributions are welcome! Please read our [contributing guidelines](CONTRIBUTING.md) before submitting pull requests.
