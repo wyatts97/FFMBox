@@ -1,70 +1,241 @@
-const videoPresets = [
+const outputFormats = [
+  // Video Formats
   {
-    name: "MP4 720p H.264",
-    ffmpegOptions: ["-vf", "scale=-2:720", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "128k"],
+    name: "MP4",
     extension: "mp4",
-    description: "Convert video to MP4 with 720p resolution using H.264 codec. Balanced quality and file size."
+    type: "video",
+    description: "Convert to MP4 format.",
+    configurableOptions: [
+      { id: "resolution", label: "Resolution", type: "select", values: ["Original", "480p", "720p", "1080p"], default: "720p" },
+      { id: "videoQuality", label: "Video Quality (CRF)", type: "range", min: 18, max: 28, step: 1, default: 23, tooltip: "Constant Rate Factor. Lower values mean higher quality." },
+      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 128, tooltip: "Sets the target audio bitrate." },
+      { id: "speedPreset", label: "Encoding Speed", type: "select", values: ["ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"], default: "medium", tooltip: "Affects encoding speed and compression efficiency." }
+    ]
   },
   {
-    name: "MP4 1080p H.264",
-    ffmpegOptions: ["-vf", "scale=-2:1080", "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", "-b:a", "192k"],
-    extension: "mp4",
-    description: "Convert video to MP4 with 1080p resolution using H.264 codec with good quality."
-  },
-  {
-    name: "WebM VP9 720p",
-    ffmpegOptions: ["-vf", "scale=-2:720", "-c:v", "libvpx-vp9", "-b:v", "2M", "-c:a", "libopus", "-b:a", "128k"],
+    name: "WebM",
     extension: "webm",
-    description: "Convert video to WebM format with VP9 codec at 720p resolution."
+    type: "video",
+    description: "Convert to WebM format.",
+    configurableOptions: [
+      { id: "resolution", label: "Resolution", type: "select", values: ["Original", "480p", "720p", "1080p"], default: "720p" },
+      { id: "videoBitrate", label: "Video Bitrate (Mbps)", type: "number", default: 2, tooltip: "Sets the target video bitrate." },
+      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 128, tooltip: "Sets the target audio bitrate." }
+    ]
   },
   {
-    name: "GIF from Video (max 5s)",
-    ffmpegOptions: ["-t", "5", "-vf", "fps=15,scale=320:-1:flags=lanczos", "-gifflags", "+transdiff", "-y"],
+    name: "AVI",
+    extension: "avi",
+    type: "video",
+    description: "Convert to AVI format.",
+    configurableOptions: [
+      { id: "resolution", label: "Resolution", type: "select", values: ["Original", "480p", "720p", "1080p"], default: "720p" },
+      { id: "videoQuality", label: "Video Quality (CRF)", type: "range", min: 18, max: 28, step: 1, default: 23 },
+      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 128 }
+    ]
+  },
+  {
+    name: "MOV",
+    extension: "mov",
+    type: "video",
+    description: "Convert to MOV (QuickTime) format.",
+    configurableOptions: [
+      { id: "resolution", label: "Resolution", type: "select", values: ["Original", "480p", "720p", "1080p"], default: "720p" },
+      { id: "videoQuality", label: "Video Quality (CRF)", type: "range", min: 18, max: 28, step: 1, default: 23 },
+      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 128 }
+    ]
+  },
+  
+  {
+    name: "MKV",
+    extension: "mkv",
+    type: "video",
+    description: "Convert to MKV (Matroska) format.",
+    configurableOptions: [
+      { id: "resolution", label: "Resolution", type: "select", values: ["Original", "480p", "720p", "1080p"], default: "720p" },
+      { id: "videoQuality", label: "Video Quality (CRF)", type: "range", min: 18, max: 28, step: 1, default: 23 },
+      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 128 }
+    ]
+  },
+  {
+    name: "WMV",
+    extension: "wmv",
+    type: "video",
+    description: "Convert to WMV (Windows Media Video) format.",
+    configurableOptions: [
+      { id: "resolution", label: "Resolution", type: "select", values: ["Original", "480p", "720p", "1080p"], default: "720p" },
+      { id: "videoQuality", label: "Video Quality (CRF)", type: "range", min: 18, max: 28, step: 1, default: 23 },
+      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 128 }
+    ]
+  },
+  {
+    name: "MPEG",
+    extension: "mpeg",
+    type: "video",
+    description: "Convert to MPEG format.",
+    configurableOptions: [
+      { id: "resolution", label: "Resolution", type: "select", values: ["Original", "480p", "720p", "1080p"], default: "720p" },
+      { id: "videoQuality", label: "Video Quality (CRF)", type: "range", min: 18, max: 28, step: 1, default: 23 },
+      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 128 }
+    ]
+  },
+  {
+    name: "3GP",
+    extension: "3gp",
+    type: "video",
+    description: "Convert to 3GP format (for mobile devices).",
+    configurableOptions: [
+      { id: "resolution", label: "Resolution", type: "select", values: ["Original", "176x144", "320x240"], default: "176x144" },
+      { id: "videoQuality", label: "Video Quality (CRF)", type: "range", min: 18, max: 28, step: 1, default: 23 },
+      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "number", default: 64 }
+    ]
+  },
+  {
+    name: "GIF",
     extension: "gif",
-    description: "Convert first 5 seconds of video to GIF with 15 fps and scale width to 320px."
-  }
-];
+    type: "video", // GIF is treated as video for conversion purposes
+    description: "Convert video to GIF.",
+    configurableOptions: [
+      { id: "fps", label: "Frames Per Second", type: "number", default: 15, tooltip: "Higher FPS means smoother animation but larger file size." },
+      { id: "startTime", label: "Start Time (HH:MM:SS)", type: "text", default: "00:00:00", tooltip: "Start conversion from this timestamp." },
+      { id: "endTime", label: "End Time (HH:MM:SS)", type: "text", default: "00:00:05", tooltip: "End conversion at this timestamp." },
+      { id: "resolution", label: "Resolution", type: "select", values: ["Original", "320p", "480p"], default: "320p" }
+    ]
+  },
 
-const audioPresets = [
+  // Audio Formats
   {
-    name: "MP3 128 kbps",
-    ffmpegOptions: ["-codec:a", "libmp3lame", "-b:a", "128k"],
+    name: "MP3",
     extension: "mp3",
-    description: "Convert audio to MP3 format with 128 kbps bitrate."
+    type: "audio",
+    description: "Convert to MP3 format.",
+    configurableOptions: [
+      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "select", values: ["64", "128", "192", "256", "320"], default: "128", tooltip: "Higher bitrate means better audio quality." }
+    ]
   },
   {
-    name: "AAC 128 kbps",
-    ffmpegOptions: ["-codec:a", "aac", "-b:a", "128k"],
-    extension: "m4a",
-    description: "Convert audio to AAC format with 128 kbps bitrate."
+    name: "WAV",
+    extension: "wav",
+    type: "audio",
+    description: "Convert to WAV (Waveform Audio File Format).",
+    configurableOptions: []
   },
   {
-    name: "OGG Vorbis 128 kbps",
-    ffmpegOptions: ["-codec:a", "libvorbis", "-qscale:a", "5"],
+    name: "FLAC",
+    extension: "flac",
+    type: "audio",
+    description: "Convert to FLAC (Free Lossless Audio Codec).",
+    configurableOptions: []
+  },
+  {
+    name: "AAC",
+    extension: "aac",
+    type: "audio",
+    description: "Convert to AAC (Advanced Audio Coding).",
+    configurableOptions: [
+      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "select", values: ["64", "128", "192", "256", "320"], default: "128" }
+    ]
+  },
+  {
+    name: "OGG",
     extension: "ogg",
-    description: "Convert audio to OGG Vorbis format at quality 5 (~128 kbps)."
-  }
-];
-
-const imagePresets = [
+    type: "audio",
+    description: "Convert to OGG Vorbis format.",
+    configurableOptions: [
+      { id: "audioQuality", label: "Audio Quality (qscale)", type: "range", min: 0, max: 10, step: 1, default: 5, tooltip: "Quality scale for OGG. Higher values mean better quality." }
+    ]
+  },
   {
-    name: "JPEG 80% Quality",
-    ffmpegOptions: ["-q:v", "4"], // q:v 2-31 (lower is better quality, 4~80%)
+    name: "WMA",
+    extension: "wma",
+    type: "audio",
+    description: "Convert to WMA (Windows Media Audio) format.",
+    configurableOptions: [
+      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "select", values: ["64", "128", "192", "256"], default: "128" }
+    ]
+  },
+  {
+    name: "AIFF",
+    extension: "aiff",
+    type: "audio",
+    description: "Convert to AIFF (Audio Interchange File Format).",
+    configurableOptions: []
+  },
+  {
+    name: "M4A",
+    extension: "m4a",
+    type: "audio",
+    description: "Convert to M4A (MPEG-4 Audio) format.",
+    configurableOptions: [
+      { id: "audioBitrate", label: "Audio Bitrate (kbps)", type: "select", values: ["64", "128", "192", "256", "320"], default: "128" }
+    ]
+  },
+
+  // Image Formats
+  {
+    name: "JPG",
     extension: "jpg",
-    description: "Convert image to JPEG with 80% quality."
+    type: "image",
+    description: "Convert to JPEG format.",
+    configurableOptions: [
+      { id: "quality", label: "Quality (%)", type: "range", min: 1, max: 100, step: 1, default: 80, tooltip: "JPEG quality. Lower values mean more compression and smaller file size." }
+    ]
   },
   {
-    name: "PNG Compression",
-    ffmpegOptions: ["-compression_level", "9"],
+    name: "PNG",
     extension: "png",
-    description: "Convert image to PNG with maximum compression."
+    type: "image",
+    description: "Convert to PNG format.",
+    configurableOptions: [
+      { id: "compressionLevel", label: "Compression Level", type: "range", min: 0, max: 9, step: 1, default: 6, tooltip: "PNG compression level. Higher values mean more compression." }
+    ]
   },
   {
-    name: "WebP Lossy 75 Quality",
-    ffmpegOptions: ["-c:v", "libwebp", "-q:v", "75"],
+    name: "BMP",
+    extension: "bmp",
+    type: "image",
+    description: "Convert to BMP (Bitmap) format.",
+    configurableOptions: [
+      { id: "quality", label: "Quality (%)", type: "range", min: 1, max: 100, step: 1, default: 100, tooltip: "BMP quality. Lower values mean more compression and smaller file size." }
+    ]
+  },
+  {
+    name: "TIFF",
+    extension: "tiff",
+    type: "image",
+    description: "Convert to TIFF (Tagged Image File Format).",
+    configurableOptions: [
+      { id: "quality", label: "Quality (%)", type: "range", min: 1, max: 100, step: 1, default: 100, tooltip: "TIFF quality. Lower values mean more compression and smaller file size." }
+    ]
+  },
+  {
+    name: "WebP",
     extension: "webp",
-    description: "Convert image to WebP lossy format at 75 quality."
+    type: "image",
+    description: "Convert to WebP format.",
+    configurableOptions: [
+      { id: "quality", label: "Quality (%)", type: "range", min: 1, max: 100, step: 1, default: 75, tooltip: "WebP quality. Lower values mean more compression and smaller file size." },
+      { id: "lossless", label: "Lossless", type: "checkbox", default: false, tooltip: "Enable lossless compression." }
+    ]
+  },
+  {
+    name: "ICO",
+    extension: "ico",
+    type: "image",
+    description: "Convert to ICO (Windows Icon) format.",
+    configurableOptions: [
+      { id: "quality", label: "Quality (%)", type: "range", min: 1, max: 100, step: 1, default: 100, tooltip: "ICO quality. Lower values mean more compression and smaller file size." }
+    ]
+  },
+  {
+    name: "SVG",
+    extension: "svg",
+    type: "image",
+    description: "Convert to SVG (Scalable Vector Graphics) format.",
+    configurableOptions: [
+      { id: "quality", label: "Quality (%)", type: "range", min: 1, max: 100, step: 1, default: 100, tooltip: "SVG quality. Lower values mean more compression and smaller file size." }
+    ]
   }
 ];
 
-export { videoPresets, audioPresets, imagePresets };
+export { outputFormats };

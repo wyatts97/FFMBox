@@ -5,6 +5,7 @@
   --secondary-text: #b0b0b0;
   --default-bg: #0a0a0a;
   --primary-accent: #e53935;
+  --primary-accent-rgb: 229, 57, 53;
   --secondary-accent: #c62828;
   --container-bg: #1c1c1c;
   --container-outline: #333333;
@@ -355,11 +356,189 @@ small {
   color: var(--secondary-text);
 }
 
-.preset-selection {
-  display: grid;
-  grid-template-columns: 1fr;
+.output-format-selection {
+  display: flex;
+  flex-direction: column;
   gap: 1.5rem;
   margin-bottom: 1.5rem;
+}
+
+.tab-navigation {
+  display: flex;
+  width: 100%;
+  margin-bottom: 1.5rem;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tab-content-formats {
+  display: none;
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+}
+
+.tab-content-formats.active {
+  display: block;
+  opacity: 1;
+}
+
+.tab-button {
+  flex: 1;
+  background-color: var(--container-bg); /* Dark grey for dark mode, white for light mode */
+  border: none;
+  padding: 1rem 0;
+  cursor: pointer;
+  font-size: var(--font-size-large);
+  color: #ffffff; /* Always white text for dark mode */
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.tab-button::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 4px; /* Height of the indent */
+  background-color: transparent; /* Default transparent */
+  transition: background-color 0.3s ease; /* Smooth transition for color */
+}
+
+.tab-button:hover {
+  background-color: var(--container-outline); /* Slightly lighter dark grey on hover */
+  box-shadow: 0 0 15px rgba(var(--primary-accent-rgb), 0.5), 0 0 20px rgba(var(--primary-accent-rgb), 0.3); /* Red glow on hover */
+}
+
+.tab-button.active {
+  background-color: var(--container-bg); /* Keep dark grey background for active */
+}
+
+.tab-button.active::after {
+  background-color: var(--primary-accent); /* Deep red indent for dark mode */
+}
+
+/* Light mode adjustments */
+[data-theme='light'] .tab-button {
+  color: var(--primary-text); /* Dark text for light mode */
+  background-color: var(--container-bg); /* White for light mode */
+}
+
+[data-theme='light'] .tab-button:hover {
+  background-color: var(--container-outline); /* Lighter blue on hover */
+  box-shadow: 0 0 15px rgba(0, 123, 255, 0.5), 0 0 20px rgba(0, 123, 255, 0.3); /* Blue glow on hover */
+}
+
+[data-theme='light'] .tab-button.active {
+  background-color: var(--container-bg); /* Keep white background for active */
+}
+
+[data-theme='light'] .tab-button.active::after {
+  background-color: var(--secondary-accent); /* Darker blue indent for light mode */
+}
+
+.output-format-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.output-format-card {
+  background-color: var(--container-bg);
+  border: 1px solid var(--container-outline);
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.output-format-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--primary-accent);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+.output-format-card.selected {
+  border-color: var(--primary-accent);
+  box-shadow: 0 0 10px var(--primary-accent), 0 0 20px rgba(0, 123, 255, 0.2);
+}
+
+.output-format-card h3 {
+  font-size: var(--font-size-large);
+  font-weight: 500;
+  margin: 0.5rem 0 0.5rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.output-format-card .output-format-icon {
+  font-size: 2rem;
+  color: var(--secondary-text);
+}
+
+.output-format-card .tooltip {
+  margin-left: 0.5rem;
+}
+
+#format-options .select-group {
+  margin-bottom: 1rem;
+}
+
+#format-options input[type="range"] {
+  width: calc(100% - 40px); /* Adjust for range value display */
+  vertical-align: middle;
+}
+
+#format-options .select-group span {
+  display: inline-block;
+  width: 30px;
+  text-align: right;
+  vertical-align: middle;
+  font-size: var(--font-size-normal);
+  color: var(--primary-text);
+}
+
+#format-options input[type="checkbox"] {
+  width: auto;
+  margin-left: 0.5rem;
+}
+
+#format-options .select-group label {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+#format-options .select-group label .tooltip {
+  margin-left: 0.5rem;
+}
+
+@media (max-width: 600px) {
+  .output-format-container {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  }
+
+  .output-format-card {
+    padding: 0.75rem;
+  }
+
+  .output-format-card h3 {
+    font-size: var(--font-size-normal);
+  }
+
+  .output-format-card .output-format-icon {
+    font-size: 1.5rem;
+  }
 }
 
 .select-group {
@@ -552,57 +731,7 @@ progress::-moz-progress-bar {
     gap: 1rem;
   }
 }
-.preset-container {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  margin-top: 0.5rem;
-}
 
-.preset-card {
-  background-color: var(--container-bg);
-  border: 1px solid var(--container-outline);
-  border-radius: 8px;
-  padding: 1rem;
-  cursor: pointer;
-  transition: all var(--transition-speed) ease;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.preset-card:hover {
-  transform: translateY(-3px);
-  border-color: var(--primary-accent);
-  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-}
-
-.preset-card.selected {
-  border-color: var(--primary-accent);
-  box-shadow: 0 0 10px var(--primary-accent), 0 0 20px rgba(0, 123, 255, 0.2);
-}
-
-.preset-card h3 {
-  font-size: var(--font-size-large);
-  font-weight: 500;
-  margin: 0 0 0.5rem 0;
-  display: flex;
-  align-items: center;
-}
-
-.preset-card .preset-icon {
-  font-size: 1.5rem;
-  margin-right: 0.5rem;
-  color: var(--secondary-text);
-}
-
-.preset-card p {
-  font-size: var(--font-size-small);
-  color: var(--secondary-text);
-  margin: 0;
-  flex-grow: 1;
-}
 .collapsible-section {
   position: relative; /* Add this for stacking context */
   margin-bottom: 1.5rem;
@@ -637,21 +766,14 @@ progress::-moz-progress-bar {
 }
 
 .collapsible-content {
-  padding: 0 1.5rem;
-  overflow: visible; /* Change to visible */
-  transition: max-height 0.3s ease-out, opacity 0.3s ease-out, padding-top 0.3s ease-out, padding-bottom 0.3s ease-out;
-}
-
-.collapsible-content[hidden] {
   max-height: 0;
-  opacity: 0;
-  padding-top: 0;
-  padding-bottom: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+  padding: 0 1.5rem; /* Initial padding for collapsed state */
 }
 
-.collapsible-content:not([hidden]) {
-  max-height: 500px;
-  opacity: 1;
+.collapsible-content.expanded {
+  max-height: 500px; /* A value large enough to contain the content */
   padding-top: 1.5rem;
   padding-bottom: 1.5rem;
 }

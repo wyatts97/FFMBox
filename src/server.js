@@ -6,7 +6,7 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import ffmpeg from "fluent-ffmpeg";
 import cors from "cors";
-import { videoPresets, audioPresets, imagePresets } from "./config/presets.js";
+import { outputFormats } from "./config/presets.js";
 import { v4 as uuidv4 } from 'uuid';
 import archiver from 'archiver';
 
@@ -55,183 +55,133 @@ function tryUnlinkFile(filePath) {
 }
 
 // Serve presets for frontend
-app.get("/presets", (req, res) => {
-  res.json({ videoPresets, audioPresets, imagePresets });
+app.get("/output-formats", (req, res) => {
+  res.json(outputFormats);
 });
 
-const jobs = {}; // Store job progress
+const jobs = {};
 
-// POST /convert: receive uploaded file and conversion options, process and return converted file
-// Use multipart/form-data: file, presetKey (optional), customCommand (optional)
 app.post("/convert", upload.single("inputFile"), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: "No input file uploaded." });
-  }
-
   const jobId = uuidv4();
-  jobs[jobId] = { progress: 0, status: 'starting' };
+  jobs[jobId] = { progress: 0, status: "starting", error: null, outputFileName: null, convertedSize: 0 };
 
-  res.json({ jobId });
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded." });
+    }
 
-  // Offload the conversion to a separate async function
-  processConversion(jobId, req.file, req.body);
+    processConversion(jobId, req.file, req.body);
+    res.json({ jobId });
+  } catch (error) {
+    console.error("Error in /convert endpoint:", error);
+    jobs[jobId].status = "error";
+    jobs[jobId].error = error.message;
+    res.status(500).json({ error: "Conversion initiation failed." });
+  }
 });
+
+function parseTime(timeString) {
+  const parts = timeString.split(':');
+  const hours = parseInt(parts[0] || '0', 10);
+  const minutes = parseInt(parts[1] || '0', 10);
+  const seconds = parseInt(parts[2] || '0', 10);
+  return hours * 3600 + minutes * 60 + seconds;
+}
 
 // List of valid speed presets for validation
-const VALID_SPEED_PRESETS = new Set([
-  'ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium', 'slow', 'slower', 'veryslow'
-]);
-
 async function processConversion(jobId, file, body) {
-  let preset = null;
-  let useCustom = false;
-  const { mediaType, presetName, customCommand, videoBitrate, frameRate, audioBitrate, metaTitle, metaAuthor, speedPreset } = body;
+  const { outputExtension, outputType, customCommand, ...configurableOptions } = body;
   
-  // Log received conversion parameters
   console.log(`[${new Date().toISOString()}] Starting conversion job ${jobId}`);
-  console.log(`[${jobId}] Media type: ${mediaType}`);
-  console.log(`[${jobId}] Selected preset: ${presetName || 'Custom command'}`);
-  console.log(`[${jobId}] Speed preset: ${speedPreset || 'Not specified'}`);
-  
-  // Validate speed preset if provided
-  if (speedPreset && !VALID_SPEED_PRESETS.has(speedPreset)) {
-    const errorMsg = `Invalid speed preset: ${speedPreset}. Must be one of: ${Array.from(VALID_SPEED_PRESETS).join(', ')}`;
-    console.error(`[${jobId}] ${errorMsg}`);
-    jobs[jobId].status = 'error';
-    jobs[jobId].error = errorMsg;
-    return;
-  }
+  console.log(`[${jobId}] Output Extension: ${outputExtension}`);
+  console.log(`[${jobId}] Output Type: ${outputType}`);
+  console.log(`[${jobId}] Configurable Options:`, configurableOptions);
+
   const inputFilePath = file.path;
 
   try {
-    // ... (rest of the logic from the original /convert endpoint)
-    // Note: This is a simplified representation. The full logic would be moved here.
-    // For brevity, we'll just focus on the ffmpeg command execution and progress handling.
-    
-    // Determine preset or custom ffmpeg command
+    let ffmpegCmd = ffmpeg(inputFilePath).outputOptions("-y");
+    let outputFileName;
+
     if (customCommand && customCommand.trim().length > 0) {
-      useCustom = true;
-    } else if (presetName && presetName.trim().length > 0) {
-      const presetsMap = {
-        video: videoPresets,
-        audio: audioPresets,
-        image: imagePresets
-      };
-      preset = presetsMap[mediaType].find((p) => p.name === presetName);
-      if (!preset) throw new Error("Specified preset not found.");
+      const customOpts = customCommand.trim().split(/\s+/);
+      ffmpegCmd.outputOptions(customOpts);
+      outputFileName = `${path.parse(file.originalname).name}_converted${path.extname(file.originalname)}`;
+    } else if (outputExtension && outputType) {
+      const format = outputFormats.find(f => f.extension === outputExtension && f.type === outputType);
+      if (!format) throw new Error("Specified output format not found.");
+
+      outputFileName = `${path.parse(file.originalname).name}_converted.${outputExtension}`;
+
+      // Apply configurable options
+      format.configurableOptions.forEach(option => {
+        const value = configurableOptions[option.id];
+        if (value !== undefined) {
+          switch (option.id) {
+            case "resolution":
+              if (value !== "Original") {
+                const resolutionMap = {
+                  "480p": "-vf scale=-2:480",
+                  "720p": "-vf scale=-2:720",
+                  "1080p": "-vf scale=-2:1080"
+                };
+                ffmpegCmd.outputOptions(resolutionMap[value].split(' '));
+              }
+              break;
+            case "videoQuality": // CRF for video
+              ffmpegCmd.outputOptions([`-crf`, value.toString()]);
+              break;
+            case "videoBitrate": // for WebM
+              ffmpegCmd.outputOptions([`-b:v`, `${value}M`]);
+              break;
+            case "audioBitrate":
+              ffmpegCmd.outputOptions([`-b:a`, `${value}k`]);
+              break;
+            case "speedPreset":
+              ffmpegCmd.outputOptions([`-preset`, value]);
+              break;
+            case "fps":
+              ffmpegCmd.outputOptions([`-r`, value.toString()]);
+              break;
+            case "startTime":
+              ffmpegCmd.seekInput(value);
+              break;
+            case "endTime":
+              // Calculate duration from start to end time
+              const start = parseTime(configurableOptions["startTime"] || "00:00:00");
+              const end = parseTime(value);
+              const duration = end - start;
+              if (duration > 0) {
+                ffmpegCmd.duration(duration);
+              }
+              break;
+            case "quality": // for image formats (JPG, WebP)
+              ffmpegCmd.outputOptions([`-q:v`, value.toString()]);
+              break;
+            case "compressionLevel": // for PNG
+              ffmpegCmd.outputOptions([`-compression_level`, value.toString()]);
+              break;
+            case "lossless": // for WebP
+              if (value === "true") {
+                ffmpegCmd.outputOptions([`-lossless`, `1`]);
+              }
+              break;
+            default:
+              // Handle other options if necessary
+              break;
+          }
+        }
+      });
     } else {
-      throw new Error("No preset or custom ffmpeg command specified.");
+      throw new Error("No output format or custom ffmpeg command specified.");
     }
 
-    const outputExtension = useCustom ? (path.extname(file.originalname).slice(1) || "out") : (preset.extension || "out");
-    const outputName = path.parse(file.originalname).name;
-    const outputFileName = `${outputName}_converted.${outputExtension}`;
     const outputDir = path.join(__dirname, "../temp_outputs");
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
     const outputFilePath = path.join(outputDir, outputFileName);
 
     jobs[jobId].outputFileName = outputFileName;
     jobs[jobId].outputFilePath = outputFilePath;
-
-    const ffmpegCmd = ffmpeg(inputFilePath).outputOptions("-y");
-    
-    if (useCustom) {
-      const customOpts = customCommand.trim().split(/\s+/);
-      ffmpegCmd.outputOptions(customOpts);
-    } else {
-      let ffmpegOptions = [...preset.ffmpegOptions];
-      if (videoBitrate) {
-        const optionIndex = ffmpegOptions.indexOf('-b:v');
-        if (optionIndex > -1) {
-          ffmpegOptions[optionIndex + 1] = `${videoBitrate}k`;
-        } else {
-          ffmpegOptions.push('-b:v', `${videoBitrate}k`);
-        }
-      }
-      if (frameRate) {
-        const optionIndex = ffmpegOptions.indexOf('-r');
-        if (optionIndex > -1) {
-          ffmpegOptions[optionIndex + 1] = frameRate;
-        } else {
-          ffmpegOptions.push('-r', frameRate);
-        }
-      }
-      if (audioBitrate) {
-        const optionIndex = ffmpegOptions.indexOf('-b:a');
-        if (optionIndex > -1) {
-          ffmpegOptions[optionIndex + 1] = `${audioBitrate}k`;
-        } else {
-          ffmpegOptions.push('-b:a', `${audioBitrate}k`);
-        }
-      }
-      if (speedPreset) {
-        // For VP9 codec, we need to use -deadline instead of -preset
-        if (ffmpegOptions.includes('libvpx-vp9')) {
-          // Map speed presets to VP9's -deadline parameter
-          const vp9PresetMap = {
-            'ultrafast': 'realtime',
-            'superfast': 'realtime',
-            'veryfast': 'realtime',
-            'faster': 'good',
-            'fast': 'good',
-            'medium': 'good',
-            'slow': 'best',
-            'slower': 'best',
-            'veryslow': 'best'
-          };
-          
-          const vp9Deadline = vp9PresetMap[speedPreset] || 'good'; // Default to 'good' if not found
-          const deadlineIndex = ffmpegOptions.indexOf('-deadline');
-          
-          if (deadlineIndex > -1) {
-            console.log(`[${jobId}] Updating VP9 deadline from ${ffmpegOptions[deadlineIndex + 1]} to ${vp9Deadline}`);
-            ffmpegOptions[deadlineIndex + 1] = vp9Deadline;
-          } else {
-            console.log(`[${jobId}] Adding VP9 deadline: ${vp9Deadline}`);
-            ffmpegOptions.push('-deadline', vp9Deadline);
-          }
-          
-          // Also add -cpu-used parameter for more control over speed/quality
-          const cpuUsedMap = {
-            'ultrafast': 8,
-            'superfast': 7,
-            'veryfast': 6,
-            'faster': 5,
-            'fast': 4,
-            'medium': 3,
-            'slow': 2,
-            'slower': 1,
-            'veryslow': 0
-          };
-          
-          const cpuUsed = cpuUsedMap[speedPreset] !== undefined ? cpuUsedMap[speedPreset] : 4; // Default to 4 if not found
-          const cpuUsedIndex = ffmpegOptions.indexOf('-cpu-used');
-          
-          if (cpuUsedIndex > -1) {
-            ffmpegOptions[cpuUsedIndex + 1] = cpuUsed.toString();
-          } else {
-            ffmpegOptions.push('-cpu-used', cpuUsed.toString());
-          }
-        } else {
-          // For non-VP9 codecs, use the standard -preset parameter
-          const optionIndex = ffmpegOptions.indexOf('-preset');
-          if (optionIndex > -1) {
-            console.log(`[${jobId}] Updating existing preset from ${ffmpegOptions[optionIndex + 1]} to ${speedPreset}`);
-            ffmpegOptions[optionIndex + 1] = speedPreset;
-          } else {
-            console.log(`[${jobId}] Adding new speed preset: ${speedPreset}`);
-            ffmpegOptions.push('-preset', speedPreset);
-          }
-        }
-      }
-      ffmpegCmd.outputOptions(ffmpegOptions);
-      if (metaTitle) {
-        ffmpegCmd.outputOptions(`-metadata`, `title=${metaTitle}`);
-      }
-      if (metaAuthor) {
-        ffmpegCmd.outputOptions(`-metadata`, `author=${metaAuthor}`);
-      }
-    }
 
     ffmpegCmd
       .on('progress', (progress) => {

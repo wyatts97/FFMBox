@@ -4,7 +4,6 @@ Thank you for your interest in contributing to FFMBox! We appreciate your time a
 
 ## 📋 Table of Contents
 
-- [Code of Conduct](#code-of-conduct)
 - [How Can I Contribute?](#how-can-i-contribute)
   - [Reporting Bugs](#reporting-bugs)
   - [Suggesting Enhancements](#suggesting-enhancements)
@@ -14,10 +13,6 @@ Thank you for your interest in contributing to FFMBox! We appreciate your time a
 - [Coding Standards](#coding-standards)
 - [Commit Message Guidelines](#commit-message-guidelines)
 - [License](#license)
-
-## Code of Conduct
-
-This project and everyone participating in it is governed by our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report any unacceptable behavior to the project maintainers.
 
 ## How Can I Contribute?
 

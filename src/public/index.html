@@ -43,18 +43,29 @@
               <small>Supports all file types that FFMPEG supports.</small>
             </section>
 
-            <section class="preset-selection">
-              <div class="select-group">
-                <label>Media Type</label>
-                <div class="segmented-control" id="mediaTypeControl">
-                  <button class="segment-button active" data-value="video">Video</button>
-                  <button class="segment-button" data-value="audio">Audio</button>
-                  <button class="segment-button" data-value="image">Image</button>
-                </div>
+            <section class="output-format-selection">
+              <div class="tab-navigation">
+                <button class="tab-button active" data-tab-type="video">Video</button>
+                <button class="tab-button" data-tab-type="audio">Audio</button>
+                <button class="tab-button" data-tab-type="image">Image</button>
               </div>
-              <div class="select-group">
-                <label for="presetSelect">Choose Preset</label>
-                <div id="presetContainer" class="preset-container"></div>
+              <div class="tab-content-formats active" id="video-formats-tab">
+                <div id="outputFormatContainerVideo" class="output-format-container"></div>
+              </div>
+              <div class="tab-content-formats" id="audio-formats-tab" hidden>
+                <div id="outputFormatContainerAudio" class="output-format-container"></div>
+              </div>
+              <div class="tab-content-formats" id="image-formats-tab" hidden>
+                <div id="outputFormatContainerImage" class="output-format-container"></div>
+              </div>
+            </section>
+
+            <section class="collapsible-section" id="format-options-section" hidden>
+              <h3 class="collapsible-header" data-target="format-options">
+                Format Options <i class="fas fa-chevron-down"></i>
+              </h3>
+              <div id="format-options" class="collapsible-content">
+                <!-- Dynamic options will be rendered here -->
               </div>
             </section>
     

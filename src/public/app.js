@@ -3,8 +3,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const fileLabel = document.querySelector('.file-label');
   const fileLabelText = document.getElementById('file-label-text');
   const selectedFilesPreview = document.getElementById('selected-files-preview');
-  const mediaTypeControl = document.getElementById('mediaTypeControl');
-  const presetContainer = document.getElementById('presetContainer');
+  const outputFormatContainerVideo = document.getElementById('outputFormatContainerVideo');
+  const outputFormatContainerAudio = document.getElementById('outputFormatContainerAudio');
+  const outputFormatContainerImage = document.getElementById('outputFormatContainerImage');
+  const formatOptionsSection = document.getElementById('format-options-section');
+  const formatOptionsDiv = document.getElementById('format-options');
   const customCommand = document.getElementById('customCommand');
   const convertButton = document.getElementById('convertButton');
   const progressBar = document.getElementById('progressBar');
@@ -25,7 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const toastContainer = document.getElementById('toast-container');
 
   let selectedFiles = [];
-  let presets = {};
+  let outputFormats = { video: [], audio: [], image: [] };
+  let selectedOutputFormat = null;
   let downloads = JSON.parse(localStorage.getItem('downloads')) || []; // Store download data
   let currentSort = { column: 'name', direction: 'asc' };
 
@@ -94,51 +98,70 @@ document.addEventListener('DOMContentLoaded', () => {
     setTheme(savedTheme);
   };
 
-  const fetchPresets = async () => {
+  const fetchOutputFormats = async () => {
     try {
-      const response = await fetch('/presets');
-      if (!response.ok) throw new Error('Failed to load presets');
-      presets = await response.json();
-      updatePresetOptions();
+      const response = await fetch('/output-formats');
+      if (!response.ok) throw new Error('Failed to load output formats');
+      const allFormats = await response.json();
+      outputFormats.video = allFormats.filter(f => f.type === 'video');
+      outputFormats.audio = allFormats.filter(f => f.type === 'audio');
+      outputFormats.image = allFormats.filter(f => f.type === 'image');
+      renderOutputFormatCards();
+      showTab('video'); // Show video tab by default
     } catch (error) {
-      console.error('Error fetching presets:', error);
-      presetContainer.innerHTML = '<p>Error loading presets</p>';
+      console.error('Error fetching output formats:', error);
+      outputFormatContainerVideo.innerHTML = '<p>Error loading video formats</p>';
+      outputFormatContainerAudio.innerHTML = '<p>Error loading audio formats</p>';
+      outputFormatContainerImage.innerHTML = '<p>Error loading image formats</p>';
     }
   };
 
-  const updatePresetOptions = () => {
-    const mediaType = mediaTypeControl.querySelector('.segment-button.active').dataset.value;
-    const options = presets[`${mediaType}Presets`] || [];
-    
-    const mediaTypeIcons = {
-      video: 'fas fa-video',
-      audio: 'fas fa-music',
-      image: 'fas fa-image'
-    };
-    const iconClass = mediaTypeIcons[mediaType];
+  const renderOutputFormatCards = () => {
+    outputFormatContainerVideo.innerHTML = '';
+    outputFormatContainerAudio.innerHTML = '';
+    outputFormatContainerImage.innerHTML = '';
 
-    presetContainer.innerHTML = '';
-    options.forEach(p => {
-      const card = document.createElement('div');
-      card.className = 'preset-card';
-      card.dataset.presetName = p.name;
-      
-      const title = document.createElement('h3');
-      title.textContent = p.name;
-
-      const icon = document.createElement('i');
-      icon.className = iconClass + ' preset-icon';
-      card.appendChild(icon);
-
-      const tooltip = document.createElement('span');
-      tooltip.className = 'tooltip';
-      tooltip.dataset.tooltip = p.description;
-      tooltip.innerHTML = '<i class="fas fa-circle-question"></i>';
-      title.appendChild(tooltip);
-      
-      card.appendChild(title);
-      presetContainer.appendChild(card);
+    outputFormats.video.forEach(format => {
+      const card = createFormatCard(format);
+      outputFormatContainerVideo.appendChild(card);
     });
+    outputFormats.audio.forEach(format => {
+      const card = createFormatCard(format);
+      outputFormatContainerAudio.appendChild(card);
+    });
+    outputFormats.image.forEach(format => {
+      const card = createFormatCard(format);
+      outputFormatContainerImage.appendChild(card);
+    });
+  };
+
+  const createFormatCard = (format) => {
+    const card = document.createElement('div');
+    card.className = 'output-format-card';
+    card.dataset.extension = format.extension;
+    card.dataset.type = format.type;
+    
+    const title = document.createElement('h3');
+    title.textContent = format.name;
+
+    const icon = document.createElement('i');
+    if (format.type === 'video') {
+      icon.className = 'fas fa-video output-format-icon';
+    } else if (format.type === 'audio') {
+      icon.className = 'fas fa-music output-format-icon';
+    } else if (format.type === 'image') {
+      icon.className = 'fas fa-image output-format-icon';
+    }
+    card.appendChild(icon);
+
+    const tooltip = document.createElement('span');
+    tooltip.className = 'tooltip';
+    tooltip.dataset.tooltip = format.description;
+    tooltip.innerHTML = '<i class="fas fa-circle-question"></i>';
+    title.appendChild(tooltip);
+    
+    card.appendChild(title);
+    return card;
   };
 
   const handleFileSelection = (files) => {
@@ -244,32 +267,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const formData = new FormData();
       formData.append('inputFile', file);
-      formData.append('mediaType', mediaTypeControl.querySelector('.segment-button.active').dataset.value);
-
-      const customCommandValue = customCommand.value.trim();
-      const selectedPresetCard = presetContainer.querySelector('.preset-card.selected');
-      const videoBitrate = document.getElementById('videoBitrate').value;
-      const frameRate = document.getElementById('frameRate').value;
-      const audioBitrate = document.getElementById('audioBitrate').value;
-      const metaTitle = document.getElementById('metaTitle').value;
-      const metaAuthor = document.getElementById('metaAuthor').value;
-      const speedPreset = document.getElementById('speedPreset').value; // Get speed preset
-      const presetName = selectedPresetCard ? selectedPresetCard.dataset.presetName : null;
-
-      // Add common parameters that apply to both custom and preset conversions
-      if (videoBitrate) formData.append('videoBitrate', videoBitrate);
-      if (frameRate) formData.append('frameRate', frameRate);
-      if (audioBitrate) formData.append('audioBitrate', audioBitrate);
-      if (metaTitle) formData.append('metaTitle', metaTitle);
-      if (metaAuthor) formData.append('metaAuthor', metaAuthor);
-      if (speedPreset) formData.append('speedPreset', speedPreset);
       
+      const customCommandValue = customCommand.value.trim();
+
       if (customCommandValue) {
         formData.append('customCommand', customCommandValue);
-      } else if (presetName) {
-        formData.append('presetName', presetName);
+      } else if (selectedOutputFormat) {
+        formData.append('outputExtension', selectedOutputFormat.extension);
+        formData.append('outputType', selectedOutputFormat.type);
+        selectedOutputFormat.configurableOptions.forEach(option => {
+          const inputElement = document.getElementById(option.id);
+          if (inputElement) {
+            if (option.type === 'checkbox') {
+              formData.append(option.id, inputElement.checked);
+            } else {
+              formData.append(option.id, inputElement.value);
+            }
+          }
+        });
       } else {
-        showToast('Please select a preset or enter a custom command.', 'warning');
+        showToast('Please select an output format or enter a custom command.', 'warning');
         setUIState(false);
         return;
       }
@@ -412,22 +429,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const setUIState = (isConverting) => {
     fileInput.disabled = isConverting;
-    mediaTypeControl.querySelectorAll('.segment-button').forEach(button => {
-      button.disabled = isConverting;
-      button.style.pointerEvents = isConverting ? 'none' : 'auto';
-      button.style.opacity = isConverting ? 0.5 : 1;
-    });
-    presetContainer.querySelectorAll('.preset-card').forEach(card => {
-      card.style.pointerEvents = isConverting ? 'none' : 'auto';
-      card.style.opacity = isConverting ? 0.5 : 1;
-    });
-    customCommand.disabled = isConverting;
-    document.getElementById('videoBitrate').disabled = isConverting;
-    document.getElementById('frameRate').disabled = isConverting;
-    document.getElementById('audioBitrate').disabled = isConverting;
-    document.getElementById('metaTitle').disabled = isConverting;
-    document.getElementById('metaAuthor').disabled = isConverting;
-    document.getElementById('speedPreset').disabled = isConverting;
+    // Disable/enable input elements for configurable options
+    if (selectedOutputFormat && selectedOutputFormat.configurableOptions) {
+      selectedOutputFormat.configurableOptions.forEach(option => {
+        const inputElement = document.getElementById(option.id);
+        if (inputElement) {
+          inputElement.disabled = isConverting;
+          inputElement.style.pointerEvents = isConverting ? 'none' : 'auto';
+          inputElement.style.opacity = isConverting ? 0.5 : 1;
+        }
+      });
+    }
     convertButton.disabled = isConverting || selectedFiles.length === 0;
     document.getElementById('settings-button').disabled = isConverting;
 
@@ -460,59 +472,142 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  mediaTypeControl.addEventListener('click', (e) => {
-    const clickedButton = e.target.closest('.segment-button');
-    if (!clickedButton) return;
+  document.querySelectorAll('.output-format-container').forEach(container => {
+    container.addEventListener('click', (e) => {
+      const card = e.target.closest('.output-format-card');
+      if (!card) return;
 
-    mediaTypeControl.querySelectorAll('.segment-button').forEach(button => button.classList.remove('active'));
-    clickedButton.classList.add('active');
-    updatePresetOptions();
+      // Remove 'selected' class from all cards in all containers
+      document.querySelectorAll('.output-format-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
 
-    const mediaType = clickedButton.dataset.value;
-    const advancedOptions = document.getElementById('advanced-options');
-    const metadataSection = document.getElementById('metadata-section');
-    const advancedOptionsHeader = document.querySelector('[data-target="advanced-options"]');
-    
-    // Show/hide video/audio specific options
-    const showAdvanced = mediaType === 'video' || mediaType === 'audio';
-    advancedOptions.hidden = !showAdvanced;
-    metadataSection.hidden = !showAdvanced;
-    advancedOptionsHeader.style.display = showAdvanced ? 'flex' : 'none';
-    document.querySelector('[data-target="metadata-section"]').style.display = showAdvanced ? 'flex' : 'none';
-  });
-
-  // Collapsible sections logic
-  document.querySelectorAll('.collapsible-header').forEach(header => {
-    header.addEventListener('click', () => {
-      const targetId = header.dataset.target;
-      const targetContent = document.getElementById(targetId);
-      if (targetContent) {
-        const isHidden = targetContent.hidden;
-        targetContent.hidden = !isHidden;
-        header.classList.toggle('expanded', !isHidden);
-
-        if (isHidden) {
-          // Expanding: set overflow to hidden for animation
-          targetContent.style.overflow = 'hidden';
-          targetContent.addEventListener('transitionend', () => {
-            // After animation, set overflow to visible
-            targetContent.style.overflow = 'visible';
-          }, { once: true });
-        } else {
-          // Collapsing: set overflow to hidden
-          targetContent.style.overflow = 'hidden';
-        }
-      }
+      const selectedExtension = card.dataset.extension;
+      const selectedType = card.dataset.type;
+      
+      // Find the selected format across all categories
+      selectedOutputFormat = Object.values(outputFormats).flat().find(format => format.extension === selectedExtension && format.type === selectedType);
+      
+      renderFormatOptions(selectedOutputFormat);
     });
   });
 
-  presetContainer.addEventListener('click', (e) => {
-    const card = e.target.closest('.preset-card');
-    if (!card) return;
+  const showTab = (tabType) => {
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`.tab-button[data-tab-type="${tabType}"]`).classList.add('active');
 
-    presetContainer.querySelectorAll('.preset-card').forEach(c => c.classList.remove('selected'));
-    card.classList.add('selected');
+    const outputFormatSelection = document.querySelector('.output-format-selection');
+    let maxHeight = 0;
+
+    document.querySelectorAll('.tab-content-formats').forEach(content => {
+      if (content.id === `${tabType}-formats-tab`) {
+        content.classList.add('active');
+        // Temporarily make it visible to measure height
+        content.style.position = 'relative';
+        content.style.visibility = 'hidden';
+        content.style.opacity = '0';
+        content.style.display = 'block';
+        maxHeight = Math.max(maxHeight, content.offsetHeight);
+        content.style.position = '';
+        content.style.visibility = '';
+        content.style.opacity = '';
+        content.style.display = '';
+      } else {
+        content.classList.remove('active');
+      }
+    });
+
+    outputFormatSelection.style.minHeight = `${maxHeight}px`;
+
+    // Re-apply active class after height is set to trigger transition
+    document.querySelectorAll('.tab-content-formats').forEach(content => {
+      if (content.id === `${tabType}-formats-tab`) {
+        content.classList.add('active');
+      }
+    });
+  };
+
+  // Tab switching logic for format types
+  document.querySelectorAll('.tab-button').forEach(button => {
+    button.addEventListener('click', (e) => {
+      showTab(e.target.dataset.tabType);
+    });
   });
+
+  const renderFormatOptions = (format) => {
+    formatOptionsDiv.innerHTML = '';
+    formatOptionsSection.hidden = false;
+
+    if (format && format.configurableOptions) {
+      format.configurableOptions.forEach(option => {
+        const selectGroup = document.createElement('div');
+        selectGroup.className = 'select-group';
+
+        const label = document.createElement('label');
+        label.setAttribute('for', option.id);
+        label.textContent = option.label;
+        if (option.tooltip) {
+          const tooltipSpan = document.createElement('span');
+          tooltipSpan.className = 'tooltip';
+          tooltipSpan.dataset.tooltip = option.tooltip;
+          tooltipSpan.innerHTML = '<i class="fas fa-circle-question"></i>';
+          label.appendChild(tooltipSpan);
+        }
+        selectGroup.appendChild(label);
+
+        let inputElement;
+        switch (option.type) {
+          case 'select':
+            inputElement = document.createElement('select');
+            option.values.forEach(val => {
+              const opt = document.createElement('option');
+              opt.value = val;
+              opt.textContent = val;
+              inputElement.appendChild(opt);
+            });
+            inputElement.value = option.default;
+            break;
+          case 'range':
+            inputElement = document.createElement('input');
+            inputElement.type = 'range';
+            inputElement.min = option.min;
+            inputElement.max = option.max;
+            inputElement.step = option.step;
+            inputElement.value = option.default;
+            const rangeValueSpan = document.createElement('span');
+            rangeValueSpan.textContent = option.default;
+            inputElement.addEventListener('input', () => {
+              rangeValueSpan.textContent = inputElement.value;
+            });
+            selectGroup.appendChild(rangeValueSpan);
+            break;
+          case 'checkbox':
+            inputElement = document.createElement('input');
+            inputElement.type = 'checkbox';
+            inputElement.checked = option.default;
+            break;
+          case 'number':
+            inputElement = document.createElement('input');
+            inputElement.type = 'number';
+            inputElement.placeholder = `e.g., ${option.default}`;
+            inputElement.value = option.default;
+            break;
+          case 'text':
+            inputElement = document.createElement('input');
+            inputElement.type = 'text';
+            inputElement.placeholder = `e.g., ${option.default}`;
+            inputElement.value = option.default;
+            break;
+          default:
+            inputElement = document.createElement('input');
+            inputElement.type = 'text';
+            inputElement.value = option.default;
+        }
+        inputElement.id = option.id;
+        selectGroup.appendChild(inputElement);
+        formatOptionsDiv.appendChild(selectGroup);
+      });
+    }
+  };
 
   customCommand.addEventListener('input', () => {
     const currentValue = customCommand.value;
@@ -582,8 +677,7 @@ document.addEventListener('DOMContentLoaded', () => {
   themeToggle.addEventListener('change', () => setTheme(themeToggle.checked ? 'light' : 'dark'));
 
   loadTheme();
-  mediaTypeControl.querySelector('[data-value="video"]').classList.add('active');
-  fetchPresets();
+  fetchOutputFormats();
 
   // Tab switching logic
   const navItems = document.querySelectorAll('.nav-item');
@@ -624,5 +718,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const customCommandTooltip = document.querySelector('.custom-command-section .tooltip');
   customCommandTooltip.addEventListener('click', () => {
     window.open('https://ffmpeg.org/ffmpeg.html', '_blank');
+  });
+
+  // Collapsible sections logic
+  document.querySelectorAll('.collapsible-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const targetId = header.dataset.target;
+      const content = document.getElementById(targetId);
+      if (content) {
+        header.classList.toggle('expanded');
+        content.classList.toggle('expanded');
+      }
+    });
   });
 });
