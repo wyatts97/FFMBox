@@ -256,16 +256,18 @@ document.addEventListener('DOMContentLoaded', () => {
       const speedPreset = document.getElementById('speedPreset').value; // Get speed preset
       const presetName = selectedPresetCard ? selectedPresetCard.dataset.presetName : null;
 
+      // Add common parameters that apply to both custom and preset conversions
+      if (videoBitrate) formData.append('videoBitrate', videoBitrate);
+      if (frameRate) formData.append('frameRate', frameRate);
+      if (audioBitrate) formData.append('audioBitrate', audioBitrate);
+      if (metaTitle) formData.append('metaTitle', metaTitle);
+      if (metaAuthor) formData.append('metaAuthor', metaAuthor);
+      if (speedPreset) formData.append('speedPreset', speedPreset);
+      
       if (customCommandValue) {
         formData.append('customCommand', customCommandValue);
       } else if (presetName) {
         formData.append('presetName', presetName);
-        if (videoBitrate) formData.append('videoBitrate', videoBitrate);
-        if (frameRate) formData.append('frameRate', frameRate);
-        if (audioBitrate) formData.append('audioBitrate', audioBitrate);
-        if (metaTitle) formData.append('metaTitle', metaTitle);
-        if (metaAuthor) formData.append('metaAuthor', metaAuthor);
-        if (speedPreset) formData.append('speedPreset', speedPreset); // Add speed preset to formData
       } else {
         showToast('Please select a preset or enter a custom command.', 'warning');
         setUIState(false);
