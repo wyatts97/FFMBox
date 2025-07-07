@@ -114,13 +114,6 @@ You can modify or add presets in `src/config/presets.js` to include your frequen
 
 ## 📦 Deployment
 
-### Docker (Recommended)
-
-```bash
-docker build -t fmbox .
-docker run -p 3000:3000 -v /path/to/output:/app/temp_outputs fmbox
-```
-
 ### PM2 (Production)
 
 ```bash
