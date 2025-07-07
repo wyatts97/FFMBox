@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from "express";
 import multer from "multer";
 import path from "path";
@@ -14,9 +15,16 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 3000;
+const maxFileSize = parseInt(process.env.MAX_FILE_SIZE) || 1073741824; // 1GB default
+const tempUploadDir = process.env.TEMP_UPLOAD_DIR || path.join(__dirname, '../temp_uploads');
+const tempOutputDir = process.env.TEMP_OUTPUT_DIR || path.join(__dirname, '../temp_outputs');
 
-// Enable CORS for frontend requests
-app.use(cors());
+// Configure CORS
+const corsOptions = {
+  origin: process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : '*',
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
 
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, "./public")));
@@ -24,8 +32,18 @@ app.use(express.static(path.join(__dirname, "./public")));
 // Use JSON parser
 app.use(express.json());
 
+// Ensure temp directories exist
+[tempUploadDir, tempOutputDir].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
+
 // Multer setup for handling file uploads to a temp directory
-const upload = multer({ dest: path.join(__dirname, "../temp_uploads") });
+const upload = multer({
+  dest: tempUploadDir,
+  limits: { fileSize: maxFileSize }
+});
 
 // Helper: remove file safely
 function tryUnlinkFile(filePath) {
