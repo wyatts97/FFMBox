@@ -10,6 +10,11 @@ import { outputFormats } from "./config/presets.js";
 import { v4 as uuidv4 } from 'uuid';
 import archiver from 'archiver';
 
+// Set ffmpeg path if provided in environment variables
+if (process.env.FFMPEG_PATH) {
+  ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH);
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -88,6 +93,18 @@ function parseTime(timeString) {
   return hours * 3600 + minutes * 60 + seconds;
 }
 
+function getVideoDuration(filePath) {
+  return new Promise((resolve, reject) => {
+    ffmpeg.ffprobe(filePath, (err, metadata) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(metadata.format.duration);
+    });
+  });
+}
+
 // List of valid speed presets for validation
 async function processConversion(jobId, file, body) {
   const { outputExtension, outputType, customCommand, ...configurableOptions } = body;
@@ -100,6 +117,7 @@ async function processConversion(jobId, file, body) {
   const inputFilePath = file.path;
 
   try {
+    const videoDuration = await getVideoDuration(inputFilePath);
     let ffmpegCmd = ffmpeg(inputFilePath).outputOptions("-y");
     let outputFileName;
 
@@ -125,7 +143,9 @@ async function processConversion(jobId, file, body) {
                   "720p": "-vf scale=-2:720",
                   "1080p": "-vf scale=-2:1080"
                 };
-                ffmpegCmd.outputOptions(resolutionMap[value].split(' '));
+                if (resolutionMap[value]) {
+                  ffmpegCmd.outputOptions(resolutionMap[value].split(' '));
+                }
               }
               break;
             case "videoQuality": // CRF for video
@@ -149,7 +169,10 @@ async function processConversion(jobId, file, body) {
             case "endTime":
               // Calculate duration from start to end time
               const start = parseTime(configurableOptions["startTime"] || "00:00:00");
-              const end = parseTime(value);
+              let end = parseTime(value);
+              if (end > videoDuration) {
+                end = videoDuration;
+              }
               const duration = end - start;
               if (duration > 0) {
                 ffmpegCmd.duration(duration);
